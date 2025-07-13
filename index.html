@@ -1,191 +1,284 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>جستجوی کتاب‌های خطی فارسی</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f3f4f6;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جستجوی کتاب‌های خطی فارسی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script type="text/javascript">
-    const { useState, useEffect } = React;
+    <div id="root"></div>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    const App = () => {
-      const [books, setBooks] = useState([]);
-      const [searchTerm, setSearchTerm] = useState('');
-      const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-      const [filteredBooks, setFilteredBooks] = useState([]);
-      const [selectedType, setSelectedType] = useState('همه');
-      const [selectedDb, setSelectedDb] = useState('همه');
-      const [types, setTypes] = useState([]);
-      const [dbs, setDbs] = useState([]);
-      const [loading, setLoading] = useState(true);
+    <script type="text/javascript">
+        const { useState, useEffect } = React;
 
-      useEffect(() => {
-        const fetchData = async () => {
-          setLoading(true);
-          try {
-            const response = await fetch('./utlibrary-manuscripts.json');
-            const data = await response.json();
-            setBooks(data);
-            setTypes(['همه', ...[...new Set(data.map(b => b.type))].sort()]);
-            setDbs(['همه', ...[...new Set(data.map(b => b.db))].sort()]);
-          } catch (error) {
-            console.error("خطا در بارگذاری داده‌ها:", error);
-          } finally {
-            setLoading(false);
-          }
-        };
-        fetchData();
-      }, []);
+        const App = () => {
+            const [books, setBooks] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // New state for debounced term
+            const [filteredBooks, setFilteredBooks] = useState([]);
+            const [selectedType, setSelectedType] = useState('همه');
+            const [selectedDb, setSelectedDb] = useState('همه');
+            const [types, setTypes] = useState([]);
+            const [dbs, setDbs] = useState([]);
+            const [loading, setLoading] = useState(true);
 
-      useEffect(() => {
-        const timer = setTimeout(() => {
-          setDebouncedSearchTerm(searchTerm);
-        }, 300);
-        return () => clearTimeout(timer);
-      }, [searchTerm]);
+            useEffect(() => {
+                const fetchData = async () => {
+                    setLoading(true);
+                    try {
+                        const response = await fetch('./data/data.json');
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const data = await response.json();
+                        setBooks(data);
 
-      useEffect(() => {
-        let results = books;
+                        const uniqueTypes = [...new Set(data.map(book => book.type))].sort();
+                        const uniqueDbs = [...new Set(data.map(book => book.db))].sort();
+                        setTypes(['همه', ...uniqueTypes]);
+                        setDbs(['همه', ...uniqueDbs]);
 
-        if (debouncedSearchTerm.trim().length >= 2) {
-          const q = debouncedSearchTerm.toLowerCase();
-          results = results.filter(b =>
-            (b.title && b.title.toLowerCase().includes(q)) ||
-            (b.author && b.author.toLowerCase().includes(q)) ||
-            (b.id && b.id.toLowerCase().includes(q))
-          );
-        } else if (debouncedSearchTerm.trim() === '') {
-          results = [...books].sort(() => 0.5 - Math.random()).slice(0, 100);
-        }
+                    } catch (error) {
+                        console.error("خطا در بارگذاری داده‌ها:", error);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
 
-        if (selectedType !== 'همه') {
-          results = results.filter(b => b.type === selectedType);
-        }
+                fetchData();
+            }, []);
 
-        if (selectedDb !== 'همه') {
-          results = results.filter(b => b.db === selectedDb);
-        }
+            // Debounce effect for search term
+            useEffect(() => {
+                const handler = setTimeout(() => {
+                    setDebouncedSearchTerm(searchTerm);
+                }, 300); // 300ms debounce delay
 
-        setFilteredBooks(results);
-      }, [books, debouncedSearchTerm, selectedType, selectedDb]);
+                return () => {
+                    clearTimeout(handler);
+                };
+            }, [searchTerm]); // Only re-run if searchTerm changes
 
-      return React.createElement(
-        'div',
-        { className: 'min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8', dir: 'rtl' },
-        React.createElement(
-          'header',
-          { className: 'text-center mb-8' },
-          React.createElement('h1', { className: 'text-3xl sm:text-4xl font-bold text-gray-800 mb-2' }, 'جستجوی کتاب‌های خطی فارسی'),
-          React.createElement('p', { className: 'text-gray-600 text-lg' }, 'ابزاری ساده برای کاوش در مجموعه کتاب‌های خطی')
-        ),
-        React.createElement(
-          'div',
-          { className: 'max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8' },
-          React.createElement(
-            'div',
-            { className: 'mb-4' },
-            React.createElement('label', { htmlFor: 'search', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'جستجو (حداقل ۲ حرف):'),
-            React.createElement('input', {
-              type: 'text',
-              id: 'search',
-              className: 'shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg',
-              placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
-              value: searchTerm,
-              onChange: e => setSearchTerm(e.target.value),
-              dir: 'rtl'
-            })
-          ),
-          React.createElement(
-            'div',
-            { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4' },
-            React.createElement(
-              'div',
-              null,
-              React.createElement('label', { htmlFor: 'type-filter', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'فیلتر بر اساس نوع:'),
-              React.createElement(
-                'select',
-                {
-                  id: 'type-filter',
-                  className: 'shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg bg-white',
-                  value: selectedType,
-                  onChange: e => setSelectedType(e.target.value),
-                  dir: 'rtl'
-                },
-                types.map(type => React.createElement('option', { key: type, value: type }, type))
-              )
-            ),
-            React.createElement(
-              'div',
-              null,
-              React.createElement('label', { htmlFor: 'db-filter', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'فیلتر بر اساس پایگاه داده:'),
-              React.createElement(
-                'select',
-                {
-                  id: 'db-filter',
-                  className: 'shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg bg-white',
-                  value: selectedDb,
-                  onChange: e => setSelectedDb(e.target.value),
-                  dir: 'rtl'
-                },
-                dbs.map(db => React.createElement('option', { key: db, value: db }, db))
-              )
-            )
-          )
-        ),
-        loading
-          ? React.createElement('div', { className: 'text-center text-gray-600 text-xl' }, 'در حال بارگذاری داده‌ها...')
-          : React.createElement(
-              'div',
-              { className: 'max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6' },
-              filteredBooks.length > 0
-                ? filteredBooks.map((book, index) =>
+            useEffect(() => {
+                let currentFiltered = [];
+
+                // Only apply search filtering if debouncedSearchTerm has at least 2 characters
+                if (debouncedSearchTerm.length >= 2) {
+                    const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase();
+                    currentFiltered = books.filter(book =>
+                        ((book.title || '').toLowerCase().includes(lowerCaseSearchTerm)) ||
+                        ((book.author || '').toLowerCase().includes(lowerCaseSearchTerm)) ||
+                        ((book.id || '').toLowerCase().includes(lowerCaseSearchTerm))
+                    );
+                } else {
+                    currentFiltered = [];
+                }
+
+                if (selectedType && selectedType !== 'همه') {
+                    currentFiltered = currentFiltered.filter(book => book.type === selectedType);
+                }
+
+                if (selectedDb && selectedDb !== 'همه') {
+                    currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
+                }
+
+                setFilteredBooks(currentFiltered);
+            }, [books, debouncedSearchTerm, selectedType, selectedDb]); // Dependency changed to debouncedSearchTerm
+
+            const handleSearchChange = (event) => {
+                setSearchTerm(event.target.value);
+            };
+
+            const handleTypeChange = (event) => {
+                setSelectedType(event.target.value);
+            };
+
+            const handleDbChange = (event) => {
+                setSelectedDb(event.target.value);
+            };
+
+            return React.createElement(
+                'div',
+                { className: 'min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8', dir: 'rtl' },
+                React.createElement(
+                    'header',
+                    { className: 'text-center mb-8' },
                     React.createElement(
-                      'div',
-                      { key: book.id || index, className: 'bg-white p-6 rounded-lg shadow-md border border-gray-200' },
-                      React.createElement('h2', { className: 'text-xl font-bold text-blue-800 mb-1' }, book.title),
-                      book.author && React.createElement('p', { className: 'text-gray-800 mb-1' },
-                        React.createElement('span', { className: 'font-medium' }, 'پدیدآور: '), book.author
-                      ),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' },
-                        React.createElement('span', { className: 'font-medium' }, 'تاریخ: '), book.date || '—',
-                        React.createElement('span', { className: 'font-medium mr-2' }, ' | شماره راهنما: '), book.id
-                      ),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' },
-                        React.createElement('span', { className: 'font-medium' }, 'مرکز: '), book.db
-                      ),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' },
-                        React.createElement('span', { className: 'font-medium' }, 'نوع: '), book.type
-                      ),
-                      book.catid && React.createElement('p', { className: 'text-gray-800' },
-                        React.createElement('span', { className: 'font-medium' }, 'کاتالوگ: '),
-                        React.createElement('a', {
-                          href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
-                          target: '_blank',
-                          rel: 'noopener noreferrer',
-                          className: 'text-blue-600 hover:underline'
-                        }, book.catid)
-                      )
+                        'h1',
+                        { className: 'text-3xl sm:text-4xl font-bold text-gray-800 mb-2' },
+                        'جستجوی کتاب‌های خطی فارسی'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-600 text-lg' },
+                        'ابزاری ساده برای کاوش در مجموعه کتاب‌های خطی'
                     )
-                  )
-                : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' }, 'هیچ نتیجه‌ای یافت نشد.')
-            )
-      );
-    };
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8' },
+                    React.createElement(
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'search', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                            'جستجو (حداقل ۲ حرف برای فیلتر):'
+                        ),
+                        React.createElement('input', {
+                            type: 'text',
+                            id: 'search',
+                            className: 'shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-lg',
+                            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
+                            value: searchTerm,
+                            onChange: handleSearchChange,
+                            dir: 'rtl'
+                        })
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4' },
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'label',
+                                { htmlFor: 'type-filter', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                                'فیلتر بر اساس نوع:'
+                            ),
+                            React.createElement(
+                                'select',
+                                {
+                                    id: 'type-filter',
+                                    className: 'shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-lg bg-white',
+                                    value: selectedType,
+                                    onChange: handleTypeChange,
+                                    dir: 'rtl'
+                                },
+                                types.map(type =>
+                                    React.createElement('option', { key: type, value: type }, type)
+                                )
+                            )
+                        ),
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'label',
+                                { htmlFor: 'db-filter', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                                'فیلتر بر اساس پایگاه داده:'
+                            ),
+                            React.createElement(
+                                'select',
+                                {
+                                    id: 'db-filter',
+                                    className: 'shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-lg bg-white',
+                                    value: selectedDb,
+                                    onChange: handleDbChange,
+                                    dir: 'rtl'
+                                },
+                                dbs.map(db =>
+                                    React.createElement('option', { key: db, value: db }, db)
+                                )
+                            )
+                        )
+                    )
+                ),
+                loading
+                    ? React.createElement(
+                          'div',
+                          { className: 'text-center text-gray-600 text-xl' },
+                          'در حال بارگذاری داده‌ها...'
+                      )
+                    : React.createElement(
+                          'div',
+                          { className: 'max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6' },
+                          filteredBooks.length > 0
+                              ? filteredBooks.map((book, index) =>
+                                    React.createElement(
+                                        'div',
+                                        {
+                                            key: book.id || index,
+                                            className: 'bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 ease-in-out border border-gray-200'
+                                        },
+                                        React.createElement(
+                                            'h2',
+                                            { className: 'text-xl font-extrabold text-blue-800 mb-1' },
+                                            book.title
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-gray-800 mb-1' },
+                                            React.createElement('span', { className: 'font-medium' }, 'پدیدآور:'),
+                                            ' ',
+                                            book.author
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-gray-800 mb-1' },
+                                            React.createElement('span', { className: 'font-medium' }, 'تاریخ انتشار:'),
+                                            ' ',
+                                            book.date
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-gray-800 mb-1' },
+                                            React.createElement('span', { className: 'font-medium' }, 'مرکز:'),
+                                            ' ',
+                                            book.db
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-gray-800 mb-1' },
+                                            React.createElement('span', { className: 'font-medium' }, 'نوع:'),
+                                            ' ',
+                                            book.type
+                                        ),
+                                        book.catid && React.createElement(
+                                            'p',
+                                            { className: 'text-gray-800' },
+                                            React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
+                                            ' ',
+                                            book.id,
+                                            React.createElement('span', { className: 'font-medium mr-2' }, ' | لینک کاتالوگ:'),
+                                            ' ',
+                                            React.createElement(
+                                                'a',
+                                                {
+                                                    href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
+                                                    target: '_blank',
+                                                    rel: 'noopener noreferrer',
+                                                    className: 'text-blue-600 hover:underline'
+                                                },
+                                                book.catid
+                                            )
+                                        )
+                                    )
+                                )
+                              : React.createElement(
+                                  'div',
+                                  { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
+                                  debouncedSearchTerm.length < 2
+                                    ? 'برای شروع جستجو، حداقل ۲ حرف وارد کنید.'
+                                    : 'هیچ نتیجه‌ای یافت نشد.'
+                              )
+                      )
+            );
+        };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(React.createElement(App));
-  </script>
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(React.createElement(App, null));
+    </script>
 </body>
 </html>
