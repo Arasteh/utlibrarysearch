@@ -19,7 +19,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <script type="text/javascript">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React; // Removed useRef as it's not needed with this debounce pattern
 
         const App = () => {
             const [books, setBooks] = useState([]);
@@ -32,13 +32,11 @@
             const [dbs, setDbs] = useState([]);
             const [loading, setLoading] = useState(true);
 
-            const timerRef = useRef(null);
-
             useEffect(() => {
                 const fetchData = async () => {
                     setLoading(true);
                     try {
-                        // Changed the data file path as per user's instruction
+                        // Using the path specified by the user
                         const response = await fetch('./utlibrary-manuscripts.json');
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
@@ -63,20 +61,16 @@
 
             // Debounce effect for search term
             useEffect(() => {
-                if (timerRef.current) {
-                    clearTimeout(timerRef.current);
-                }
-
-                timerRef.current = setTimeout(() => {
+                // Set a new timer
+                const handler = setTimeout(() => {
                     setDebouncedSearchTerm(searchTerm);
                 }, 300);
 
+                // Cleanup function: clear the timeout if searchTerm changes before the delay
                 return () => {
-                    if (timerRef.current) {
-                        clearTimeout(timerRef.current);
-                    }
+                    clearTimeout(handler);
                 };
-            }, [searchTerm]);
+            }, [searchTerm]); // This effect runs whenever searchTerm changes
 
             useEffect(() => {
                 let currentFiltered = [];
