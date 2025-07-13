@@ -19,13 +19,11 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <script type="text/javascript">
-    // Helper function to convert Latin digits to Persian digits
     const toPersianDigits = (num) => {
         const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
         return String(num).replace(/\d/g, digit => persianDigits[digit]);
     };
 
-    // Helper function to format Hijri date
     const formatHijriDate = (hijridate, weekday) => {
         if (!hijridate) return '';
 
@@ -56,7 +54,6 @@
             'Wednesday': 'چهارشنبه',
             'Thursday': 'پنج‌شنبه',
             'Friday': 'جمعه'
-            // Add other variations if necessary, e.g., 'Sun': 'یکشنبه'
         };
 
         const monthName = hijriMonths[month] || String(month);
@@ -64,14 +61,13 @@
         let formattedDate = `${toPersianDigits(day)} ${monthName} ${toPersianDigits(year)}`;
 
         if (weekday && weekday.trim() !== '') {
-            const persianWeekday = persianWeekdays[weekday] || weekday; // Use mapping or original if not found
+            const persianWeekday = persianWeekdays[weekday] || weekday;
             formattedDate = `${persianWeekday} ${formattedDate}`;
         }
 
-        return `(${formattedDate})`;
+        return formattedDate;
     };
 
-    // Helper function to extract Hijri year for breakdown
     const getHijriYear = (hijridate) => {
         if (!hijridate || hijridate.length < 3) return '';
         return hijridate.length === 8 ? hijridate.substring(0, 4) : hijridate.substring(0, 3);
@@ -270,7 +266,7 @@
 
       return React.createElement(
         'div',
-        { className: 'p-6 max-w-screen-xl mx-auto', dir: 'rtl' },
+        { className: 'p-6 max-w-screen-2xl mx-auto', dir: 'rtl' }, // Increased max-width to screen-2xl
         React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی کتاب‌های خطی فارسی'),
         React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
           React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow order-first md:order-last' },
