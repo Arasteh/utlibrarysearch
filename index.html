@@ -195,6 +195,10 @@
                     valA = a.catid;
                     valB = b.catid;
                     break;
+                case 'hijridate': // Added hijridate sorting
+                    valA = a.hijridate;
+                    valB = b.hijridate;
+                    break;
                 case 'title':
                 default:
                     valA = a.title;
@@ -212,7 +216,7 @@
             let finalValA = valA;
             let finalValB = valB;
 
-            if (sortByKey === 'id' || sortByKey === 'catid') {
+            if (sortByKey === 'id' || sortByKey === 'catid' || sortByKey === 'hijridate') { // Treat hijridate as numeric for sorting
                 finalValA = parseInt(valA, 10);
                 finalValB = parseInt(valB, 10);
                 if (isNaN(finalValA) && isNaN(finalValB)) return 0;
@@ -266,7 +270,7 @@
 
       return React.createElement(
         'div',
-        { className: 'p-6 max-w-screen-2xl mx-auto', dir: 'rtl' }, // Increased max-width to screen-2xl
+        { className: 'p-6 max-w-screen-2xl mx-auto', dir: 'rtl' },
         React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی کتاب‌های خطی فارسی'),
         React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
           React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow order-first md:order-last' },
@@ -370,7 +374,8 @@
                     React.createElement('option', { value: 'author' }, 'مرتب‌سازی: پدیدآور'),
                     React.createElement('option', { value: 'date' }, 'مرتب‌سازی: تاریخ'),
                     React.createElement('option', { value: 'id' }, 'مرتب‌سازی: شماره راهنما'),
-                    React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ')
+                    React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ'),
+                    React.createElement('option', { value: 'hijridate' }, 'مرتب‌سازی: تاریخ قمری') {/* Added hijridate to sort options */}
                 ),
                 React.createElement('button', {
                     onClick: handleSortOrderToggle,
