@@ -20,11 +20,12 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <script type="text/javascript">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React; // Added useRef
 
     const App = () => {
       const [books, setBooks] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
+      const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // State for debounced term
       const [filteredBooks, setFilteredBooks] = useState([]);
       const [selectedType, setSelectedType] = useState('همه');
       const [selectedDb, setSelectedDb] = useState('همه');
@@ -32,11 +33,16 @@
       const [dbs, setDbs] = useState([]);
       const [loading, setLoading] = useState(true);
 
+      const timerRef = useRef(null); // Ref to hold the timeout ID
+
       useEffect(() => {
         const fetchData = async () => {
           setLoading(true);
           try {
-            const response = await fetch('./utlibrary-manuscripts.json');
+            const response = await fetch('./utlibrary-manuscripts.json'); // Corrected path
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
             setBooks(data);
 
@@ -54,26 +60,53 @@
         fetchData();
       }, []);
 
+      // Debounce effect for search term
       useEffect(() => {
-        let result = [...books];
+        // Clear any existing timer
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
 
-        const q = searchTerm.toLowerCase().trim();
-        if (q) {
-          result = result.filter(book =>
-            (book.title || '').toLowerCase().includes(q)
+        // Set a new timer
+        timerRef.current = setTimeout(() => {
+          setDebouncedSearchTerm(searchTerm);
+        }, 300); // 300ms delay
+
+        // Cleanup function: clear the timer if searchTerm changes before the delay
+        return () => {
+          if (timerRef.current) {
+            clearTimeout(timerRef.current);
+          }
+        };
+      }, [searchTerm]); // Re-run this effect whenever searchTerm changes
+
+      // Filtering effect, dependent on debouncedSearchTerm
+      useEffect(() => {
+        let currentFiltered = [];
+
+        // Only perform filtering if debouncedSearchTerm has at least 2 characters
+        if (debouncedSearchTerm.length >= 2) {
+          const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase();
+          currentFiltered = books.filter(book =>
+            (book.title || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+            (book.author || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+            (book.id || '').toLowerCase().includes(lowerCaseSearchTerm)
           );
         }
+        // If debouncedSearchTerm.length < 2, currentFiltered remains an empty array
 
+        // Apply type filter
         if (selectedType !== 'همه') {
-          result = result.filter(book => book.type === selectedType);
+          currentFiltered = currentFiltered.filter(book => book.type === selectedType);
         }
 
+        // Apply database filter
         if (selectedDb !== 'همه') {
-          result = result.filter(book => book.db === selectedDb);
+          currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
         }
 
-        setFilteredBooks(result.slice(0, 200));
-      }, [searchTerm, selectedType, selectedDb, books]);
+        setFilteredBooks(currentFiltered.slice(0, 200)); // Limit to 200 results
+      }, [books, debouncedSearchTerm, selectedType, selectedDb]); // Dependencies include debouncedSearchTerm
 
       return React.createElement(
         'div',
@@ -83,7 +116,7 @@
           React.createElement('input', {
             type: 'text',
             className: 'w-full mb-4 p-3 border rounded text-lg',
-            placeholder: 'جستجو بر اساس عنوان...',
+            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
             value: searchTerm,
             onChange: e => setSearchTerm(e.target.value),
             dir: 'rtl'
@@ -113,7 +146,7 @@
               filteredBooks.length > 0
                 ? filteredBooks.map((book, index) =>
                   React.createElement('div', {
-                    key: book.id || index,
+                    key: book.id || index, // Use book.id as key if available, otherwise index
                     className: 'bg-white p-4 rounded-lg shadow border'
                   },
                     React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
@@ -129,7 +162,11 @@
                     }, 'نمایش در کاتالوگ')
                   )
                 )
-                : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' }, 'نتیجه‌ای یافت نشد.')
+                : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
+                    debouncedSearchTerm.length < 2
+                      ? 'برای شروع جستجو، حداقل ۲ حرف وارد کنید.'
+                      : 'نتیجه‌ای یافت نشد.'
+                  )
             )
       );
     };
