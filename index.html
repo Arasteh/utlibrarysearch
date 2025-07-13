@@ -113,20 +113,20 @@
       }, []);
 
       useEffect(() => {
-        let currentBooks = [...books]; // Start with all books
+        let booksToStartFiltering = [...books]; // Always start with all books
 
         const q = searchTerm.toLowerCase().trim();
 
-        // Step 1: Apply search term filter
+        // Step 1: Apply search term filter (if any)
         let booksAfterSearchTerm = [];
         if (q !== '') {
-            booksAfterSearchTerm = currentBooks.filter(book =>
+            booksAfterSearchTerm = booksToStartFiltering.filter(book =>
                 (book.title || '').toLowerCase().includes(q) ||
                 (book.author || '').toLowerCase().includes(q) ||
                 (book.id || '').toLowerCase().includes(q)
             );
         } else {
-            booksAfterSearchTerm = currentBooks; // If search term is empty, consider all books for breakdown
+            booksAfterSearchTerm = booksToStartFiltering; // If search term is empty, consider all books for further filtering and breakdown
         }
 
         // Step 2: Calculate breakdown based on booksAfterSearchTerm (results after search term, before sidebar filters)
@@ -236,9 +236,11 @@
             }
         });
 
-        // Step 5: Set final filtered books for display, applying limit if search term is short
+        // Step 5: Set final filtered books for display, applying limit and random if search term is empty
         if (q === '') {
-            setFilteredBooks([]); // If search term is empty, main results are empty
+            // When search is empty, display 100 random results after applying sidebar filters
+            const shuffled = [...finalFiltered].sort(() => 0.5 - Math.random());
+            setFilteredBooks(shuffled.slice(0, 100));
         } else if (q.length > 3) {
             setFilteredBooks(finalFiltered);
         } else {
