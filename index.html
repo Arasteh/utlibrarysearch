@@ -209,9 +209,10 @@
             const isANullish = valA === null || valA === undefined || String(valA).trim() === '';
             const isBNullish = valB === null || valB === undefined || String(valB).trim() === '';
 
+            // Always push nullish values to the end, regardless of sortOrder
             if (isANullish && isBNullish) return 0;
-            if (isANullish) return sortOrder === 'asc' ? 1 : -1;
-            if (isBNullish) return sortOrder === 'asc' ? -1 : 1;
+            if (isANullish) return 1; // A is nullish, B is not. A goes after B.
+            if (isBNullish) return -1; // B is nullish, A is not. B goes after A.
 
             let finalValA = valA;
             let finalValB = valB;
@@ -220,8 +221,8 @@
                 finalValA = parseInt(valA, 10);
                 finalValB = parseInt(valB, 10);
                 if (isNaN(finalValA) && isNaN(finalValB)) return 0;
-                if (isNaN(finalValA)) return sortOrder === 'asc' ? 1 : -1;
-                if (isNaN(finalValB)) return sortOrder === 'asc' ? -1 : 1;
+                if (isNaN(finalValA)) return 1; // NaN treated as nullish, push to end
+                if (isNaN(finalValB)) return -1; // NaN treated as nullish, push to end
                 return sortOrder === 'asc' ? finalValA - finalValB : finalValB - finalValA;
             } else {
                 finalValA = String(valA).toLowerCase();
