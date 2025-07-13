@@ -20,12 +20,12 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <script type="text/javascript">
-    const { useState, useEffect, useRef } = React; // Added useRef
+    const { useState, useEffect, useRef } = React;
 
     const App = () => {
       const [books, setBooks] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
-      const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // State for debounced term
+      const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
       const [filteredBooks, setFilteredBooks] = useState([]);
       const [selectedType, setSelectedType] = useState('همه');
       const [selectedDb, setSelectedDb] = useState('همه');
@@ -33,13 +33,13 @@
       const [dbs, setDbs] = useState([]);
       const [loading, setLoading] = useState(true);
 
-      const timerRef = useRef(null); // Ref to hold the timeout ID for debounce
+      const timerRef = useRef(null);
 
       useEffect(() => {
         const fetchData = async () => {
           setLoading(true);
           try {
-            const response = await fetch('./utlibrary-manuscripts.json'); // Corrected path as per user's instruction
+            const response = await fetch('./utlibrary-manuscripts.json');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -67,10 +67,15 @@
           clearTimeout(timerRef.current);
         }
 
-        // Set a new timer
-        timerRef.current = setTimeout(() => {
-          setDebouncedSearchTerm(searchTerm);
-        }, 300); // 300ms delay
+        // If searchTerm is empty, immediately clear debouncedSearchTerm
+        if (searchTerm.trim() === '') {
+            setDebouncedSearchTerm('');
+        } else {
+            // Otherwise, set a timeout to update debouncedSearchTerm
+            timerRef.current = setTimeout(() => {
+                setDebouncedSearchTerm(searchTerm);
+            }, 300);
+        }
 
         // Cleanup function: clear the timer if searchTerm changes before the delay
         return () => {
@@ -78,24 +83,26 @@
             clearTimeout(timerRef.current);
           }
         };
-      }, [searchTerm]); // Re-run this effect whenever searchTerm changes
+      }, [searchTerm]);
 
       // Filtering effect, dependent on debouncedSearchTerm and other filters
       useEffect(() => {
-        let currentFiltered = [...books]; // Start with all books
+        let currentFiltered = [...books];
 
         const q = debouncedSearchTerm.toLowerCase().trim();
 
-        // Apply search filtering only if debouncedSearchTerm has at least 2 characters
-        if (q.length >= 2) {
-          currentFiltered = currentFiltered.filter(book =>
-            (book.title || '').toLowerCase().includes(q) ||
-            (book.author || '').toLowerCase().includes(q) ||
-            (book.id || '').toLowerCase().includes(q)
-          );
-        } else {
-          currentFiltered = []; // If search term is too short or empty, show no results
+        // If search term is empty or too short, clear results and exit
+        if (q.length < 2) {
+            setFilteredBooks([]);
+            return;
         }
+
+        // Apply search filtering
+        currentFiltered = currentFiltered.filter(book =>
+          (book.title || '').toLowerCase().includes(q) ||
+          (book.author || '').toLowerCase().includes(q) ||
+          (book.id || '').toLowerCase().includes(q)
+        );
 
         // Apply type filter
         if (selectedType !== 'همه') {
@@ -113,13 +120,25 @@
             const catidB = parseInt(b.catid, 10);
             // Handle cases where catid might not be a valid number
             if (isNaN(catidA) && isNaN(catidB)) return 0;
-            if (isNaN(catidA)) return 1; // Push non-numeric catid to end
-            if (isNaN(catidB)) return -1; // Push non-numeric catid to end
+            if (isNaN(catidA)) return 1;
+            if (isNaN(catidB)) return -1;
             return catidA - catidB;
         });
 
-        setFilteredBooks(currentFiltered.slice(0, 200)); // Limit to 200 results
-      }, [books, debouncedSearchTerm, selectedType, selectedDb]); // Dependencies include debouncedSearchTerm
+        setFilteredBooks(currentFiltered.slice(0, 200));
+      }, [books, debouncedSearchTerm, selectedType, selectedDb]);
+
+      const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
+      };
+
+      const handleTypeChange = (event) => {
+        setSelectedType(event.target.value);
+      };
+
+      const handleDbChange = (event) => {
+        setSelectedDb(event.target.value);
+      };
 
       return React.createElement(
         'div',
@@ -129,9 +148,9 @@
           React.createElement('input', {
             type: 'text',
             className: 'w-full mb-4 p-3 border rounded text-lg',
-            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...', // Updated placeholder
+            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
             value: searchTerm,
-            onChange: e => setSearchTerm(e.target.value),
+            onChange: handleSearchChange,
             dir: 'rtl'
           }),
           React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
@@ -140,7 +159,7 @@
               React.createElement('select', {
                 className: 'w-full p-2 border rounded',
                 value: selectedType,
-                onChange: e => setSelectedType(e.target.value)
+                onChange: handleTypeChange
               }, types.map(type => React.createElement('option', { key: type, value: type }, type)))
             ),
             React.createElement('div', null,
@@ -148,7 +167,7 @@
               React.createElement('select', {
                 className: 'w-full p-2 border rounded',
                 value: selectedDb,
-                onChange: e => setSelectedDb(e.target.value)
+                onChange: handleDbChange
               }, dbs.map(db => React.createElement('option', { key: db, value: db }, db)))
             )
           )
@@ -159,15 +178,15 @@
               filteredBooks.length > 0
                 ? filteredBooks.map((book, index) =>
                   React.createElement('div', {
-                    key: book.id || index, // Use book.id as key if available, otherwise index
+                    key: book.id || index,
                     className: 'bg-white p-4 rounded-lg shadow border'
                   },
                     React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
                     React.createElement('p', { className: 'text-gray-800 mb-1' }, 'پدیدآور: ' + (book.author || '')),
-                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')), // Added date back
+                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')),
                     React.createElement('p', { className: 'text-gray-800 mb-1' }, 'مرکز: ' + (book.db || '')),
                     React.createElement('p', { className: 'text-gray-800 mb-1' }, 'نوع: ' + (book.type || '')),
-                    book.catid && React.createElement('p', { className: 'text-gray-800' }, // Combined ID and link
+                    book.catid && React.createElement('p', { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
                         ' ',
                         book.id,
@@ -187,7 +206,7 @@
                   )
                 )
                 : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
-                    debouncedSearchTerm.length < 2
+                    debouncedSearchTerm.length < 2 && searchTerm.length < 2
                       ? 'برای شروع جستجو، حداقل ۲ حرف وارد کنید.'
                       : 'نتیجه‌ای یافت نشد.'
                   )
