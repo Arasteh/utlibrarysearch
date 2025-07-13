@@ -20,7 +20,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <script type="text/javascript">
-    const { useState, useEffect } = React; // useRef دیگر لازم نیست
+    const { useState, useEffect } = React;
 
     const App = () => {
       const [books, setBooks] = useState([]);
@@ -59,6 +59,8 @@
 
       // فیلتر کردن نتایج بر اساس searchTerm و فیلترهای کشویی
       useEffect(() => {
+        console.log('useEffect فیلتر در حال اجرا. عبارت جستجو:', searchTerm);
+
         let currentFiltered = [...books];
 
         const q = searchTerm.toLowerCase().trim();
@@ -66,6 +68,7 @@
         // اگر کادر جستجو خالی است، هیچ نتیجه‌ای نمایش نده
         if (q === '') {
             setFilteredBooks([]);
+            console.log('عبارت جستجو خالی است. نتایج پاک شد.');
             return;
         }
 
@@ -97,7 +100,8 @@
         });
 
         setFilteredBooks(currentFiltered.slice(0, 200)); // محدودیت ۲۰۰ نتیجه
-      }, [books, searchTerm, selectedType, selectedDb]); // وابستگی به searchTerm به جای debouncedSearchTerm
+        console.log('نتایج فیلتر شده به‌روزرسانی شد. تعداد نتایج:', currentFiltered.slice(0, 200).length);
+      }, [books, searchTerm, selectedType, selectedDb]); // وابستگی به searchTerm
 
       const handleSearchChange = (event) => {
         setSearchTerm(event.target.value);
@@ -113,6 +117,8 @@
 
       const handleClearSearch = () => {
         setSearchTerm('');
+        setSelectedType('همه'); // ریست کردن فیلتر نوع
+        setSelectedDb('همه');   // ریست کردن فیلتر پایگاه داده
       };
 
       return React.createElement(
@@ -120,7 +126,7 @@
         { className: 'p-6 max-w-5xl mx-auto', dir: 'rtl' },
         React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی کتاب‌های خطی فارسی'),
         React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow mb-6' },
-          React.createElement('div', { className: 'flex items-center mb-4' }, // استفاده از فلکس برای کنار هم قرار دادن input و button
+          React.createElement('div', { className: 'flex items-center mb-4' },
             React.createElement('input', {
               type: 'text',
               className: 'flex-grow p-3 border rounded-r-none rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out',
@@ -132,7 +138,7 @@
             React.createElement('button', {
               onClick: handleClearSearch,
               className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-l-none rounded-lg transition duration-200 ease-in-out shadow-md'
-            }, 'پاک کردن')
+            }, 'پاک کردن فیلترها')
           ),
           React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
             React.createElement('div', null,
@@ -155,7 +161,10 @@
         ),
         loading
           ? React.createElement('div', { className: 'text-center text-gray-600 text-lg' }, 'در حال بارگذاری...')
-          : React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+          : React.createElement('div', {
+              key: `${searchTerm}-${selectedType}-${selectedDb}`, // کلید پویا برای اجبار به رندر مجدد
+              className: 'grid grid-cols-1 md:grid-cols-2 gap-4'
+            },
               filteredBooks.length > 0
                 ? filteredBooks.map((book, index) =>
                   React.createElement('div', {
@@ -188,7 +197,7 @@
                 )
                 : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
                     searchTerm.trim() === ''
-                      ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.' // پیام برای جستجوی خالی
+                      ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.'
                       : 'نتیجه‌ای یافت نشد.'
                   )
             )
