@@ -113,26 +113,27 @@
       }, []);
 
       useEffect(() => {
-        let booksToFilter = [...books]; // Start with all books for filtering
+        let currentBooks = [...books]; // Start with all books
 
         const q = searchTerm.toLowerCase().trim();
 
-        // Apply search term filter if present
+        // Step 1: Apply search term filter
+        let booksAfterSearchTerm = [];
         if (q !== '') {
-            booksToFilter = booksToFilter.filter(book =>
+            booksAfterSearchTerm = currentBooks.filter(book =>
                 (book.title || '').toLowerCase().includes(q) ||
                 (book.author || '').toLowerCase().includes(q) ||
                 (book.id || '').toLowerCase().includes(q)
             );
+        } else {
+            booksAfterSearchTerm = currentBooks; // If search term is empty, consider all books for breakdown
         }
 
-        // Calculate breakdown based on `booksToFilter` *before* applying sidebar filters
-        const booksForBreakdownCalculation = [...booksToFilter];
-
+        // Step 2: Calculate breakdown based on booksAfterSearchTerm (results after search term, before sidebar filters)
         const newAuthorCounts = {};
         const newDateCounts = {};
         const newHijriDateCounts = {};
-        booksForBreakdownCalculation.forEach(book => {
+        booksAfterSearchTerm.forEach(book => {
             if (book.author) {
                 newAuthorCounts[book.author] = (newAuthorCounts[book.author] || 0) + 1;
             }
@@ -145,7 +146,7 @@
             }
         });
 
-        const minCountThreshold = q === '' ? 10 : 2;
+        const minCountThreshold = q === '' ? 10 : 2; // Threshold depends on search term presence
 
         const displayAuthorCounts = Object.entries(newAuthorCounts)
             .filter(([, count]) => count >= minCountThreshold)
@@ -163,86 +164,85 @@
         setDateBreakdown(displayDateCounts);
         setHijriDateBreakdown(displayHijriDateCounts);
 
-        // Apply sidebar filters to `booksToFilter`
+        // Step 3: Apply sidebar filters to booksAfterSearchTerm to get final results for main display
+        let finalFiltered = [...booksAfterSearchTerm]; // Start with results after search term
+
         if (selectedAuthorFilter !== 'همه') {
-            booksToFilter = booksToFilter.filter(book => book.author === selectedAuthorFilter);
+            finalFiltered = finalFiltered.filter(book => book.author === selectedAuthorFilter);
         }
 
         if (selectedDateFilter !== 'همه') {
-            booksToFilter = booksToFilter.filter(book => book.date === selectedDateFilter);
+            finalFiltered = finalFiltered.filter(book => book.date === selectedDateFilter);
         }
 
         if (selectedHijriDateFilter !== 'همه') {
-            booksToFilter = booksToFilter.filter(book => getHijriYear(book.hijridate) === selectedHijriDateFilter);
+            finalFiltered = finalFiltered.filter(book => getHijriYear(book.hijridate) === selectedHijriDateFilter);
         }
 
-        // Handle main results display based on search term
+        // Step 4: Sort the final filtered list
+        finalFiltered.sort((a, b) => {
+            let valA, valB;
+
+            switch (sortByKey) {
+                case 'author':
+                    valA = a.author;
+                    valB = b.author;
+                    break;
+                case 'date':
+                    valA = a.date;
+                    valB = b.date;
+                    break;
+                case 'id':
+                    valA = a.id;
+                    valB = b.id;
+                    break;
+                case 'catid':
+                    valA = a.catid;
+                    valB = b.catid;
+                    break;
+                case 'hijridate':
+                    valA = a.hijridate;
+                    valB = b.hijridate;
+                    break;
+                case 'title':
+                default:
+                    valA = a.title;
+                    valB = b.title;
+                    break;
+            }
+
+            const isANullish = valA === null || valA === undefined || String(valA).trim() === '';
+            const isBNullish = valB === null || valB === undefined || String(valB).trim() === '';
+
+            if (isANullish && isBNullish) return 0;
+            if (isANullish) return 1;
+            if (isBNullish) return -1;
+
+            let finalValA = valA;
+            let finalValB = valB;
+
+            if (sortByKey === 'id' || sortByKey === 'catid' || sortByKey === 'hijridate') {
+                finalValA = parseInt(valA, 10);
+                finalValB = parseInt(valB, 10);
+                if (isNaN(finalValA) && isNaN(finalValB)) return 0;
+                if (isNaN(finalValA)) return 1;
+                if (isNaN(finalValB)) return -1;
+                return sortOrder === 'asc' ? finalValA - finalValB : finalValB - finalValA;
+            } else {
+                finalValA = String(valA).toLowerCase();
+                finalValB = String(valB).toLowerCase();
+                const comparison = finalValA.localeCompare(finalValB, 'fa', { sensitivity: 'base' });
+                return sortOrder === 'asc' ? comparison : -comparison;
+            }
+        });
+
+        // Step 5: Set final filtered books for display, applying limit if search term is short
         if (q === '') {
             setFilteredBooks([]); // If search term is empty, main results are empty
+        } else if (q.length > 3) {
+            setFilteredBooks(finalFiltered);
         } else {
-            // Sort the final filtered list
-            booksToFilter.sort((a, b) => {
-                let valA, valB;
-
-                switch (sortByKey) {
-                    case 'author':
-                        valA = a.author;
-                        valB = b.author;
-                        break;
-                    case 'date':
-                        valA = a.date;
-                        valB = b.date;
-                        break;
-                    case 'id':
-                        valA = a.id;
-                        valB = b.id;
-                        break;
-                    case 'catid':
-                        valA = a.catid;
-                        valB = b.catid;
-                        break;
-                    case 'hijridate':
-                        valA = a.hijridate;
-                        valB = b.hijridate;
-                        break;
-                    case 'title':
-                    default:
-                        valA = a.title;
-                        valB = b.title;
-                        break;
-                }
-
-                const isANullish = valA === null || valA === undefined || String(valA).trim() === '';
-                const isBNullish = valB === null || valB === undefined || String(valB).trim() === '';
-
-                if (isANullish && isBNullish) return 0;
-                if (isANullish) return 1;
-                if (isBNullish) return -1;
-
-                let finalValA = valA;
-                let finalValB = valB;
-
-                if (sortByKey === 'id' || sortByKey === 'catid' || sortByKey === 'hijridate') {
-                    finalValA = parseInt(valA, 10);
-                    finalValB = parseInt(valB, 10);
-                    if (isNaN(finalValA) && isNaN(finalValB)) return 0;
-                    if (isNaN(finalValA)) return 1;
-                    if (isNaN(finalValB)) return -1;
-                    return sortOrder === 'asc' ? finalValA - finalValB : finalValB - finalValA;
-                } else {
-                    finalValA = String(valA).toLowerCase();
-                    finalValB = String(valB).toLowerCase();
-                    const comparison = finalValA.localeCompare(finalValB, 'fa', { sensitivity: 'base' });
-                    return sortOrder === 'asc' ? comparison : -comparison;
-                }
-            });
-
-            // Apply limit for short search terms
-            if (q.length > 3) {
-                setFilteredBooks(booksToFilter);
-            } else {
-                setFilteredBooks(booksToFilter.slice(0, 200));
-            }
+            setFilteredBooks(finalFiltered.slice(0, 200));
         }
       }, [books, searchTerm, sortByKey, sortOrder, selectedAuthorFilter, selectedDateFilter, selectedHijriDateFilter]);
 
@@ -439,7 +439,7 @@
                       ),
                       book.catid && React.createElement('p', { className: 'text-gray-800' },
                           React.createElement('span', { className: 'font-bold' }, 'لینک کاتالوگ:'),
-                          React.createElement('br', null), // New line for the link
+                          React.createElement('br', null),
                           React.createElement(
                               'a',
                               {
