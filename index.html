@@ -53,12 +53,10 @@
       useEffect(() => {
         let currentFiltered = books;
 
-        if (searchTerm.trim().length >= 2) {
-          const q = searchTerm.toLowerCase();
+        const q = searchTerm.toLowerCase();
+        if (q) {
           currentFiltered = currentFiltered.filter(book =>
-            (book.title || '').toLowerCase().includes(q) ||
-            (book.author || '').toLowerCase().includes(q) ||
-            (book.id || '').toLowerCase().includes(q)
+            (book.title || '').toLowerCase().includes(q)
           );
         }
 
@@ -70,7 +68,6 @@
           currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
         }
 
-        // محدودسازی به ۲۰۰ نتیجه اول
         setFilteredBooks(currentFiltered.slice(0, 200));
       }, [searchTerm, books, selectedType, selectedDb]);
 
@@ -83,12 +80,12 @@
         ),
         React.createElement('div', { className: 'max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8' },
           React.createElement('div', { className: 'mb-4' },
-            React.createElement('label', { htmlFor: 'search', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'جستجو (حداقل ۲ حرف):'),
+            React.createElement('label', { htmlFor: 'search', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'جستجو در عنوان:'),
             React.createElement('input', {
               type: 'text',
               id: 'search',
               className: 'shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 text-lg',
-              placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
+              placeholder: 'مثلاً: دیوان حافظ',
               value: searchTerm,
               onChange: (e) => setSearchTerm(e.target.value),
               dir: 'rtl'
@@ -148,9 +145,7 @@
                     )
                   )
                 : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
-                    searchTerm.trim().length < 2
-                      ? 'برای شروع جستجو، حداقل ۲ حرف وارد کنید.'
-                      : 'هیچ نتیجه‌ای یافت نشد.'
+                    'هیچ نتیجه‌ای یافت نشد.'
                 )
             )
       );
