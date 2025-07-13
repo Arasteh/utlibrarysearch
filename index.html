@@ -195,7 +195,7 @@
                     valA = a.catid;
                     valB = b.catid;
                     break;
-                case 'hijridate': // Added hijridate sorting
+                case 'hijridate':
                     valA = a.hijridate;
                     valB = b.hijridate;
                     break;
@@ -216,7 +216,7 @@
             let finalValA = valA;
             let finalValB = valB;
 
-            if (sortByKey === 'id' || sortByKey === 'catid' || sortByKey === 'hijridate') { // Treat hijridate as numeric for sorting
+            if (sortByKey === 'id' || sortByKey === 'catid' || sortByKey === 'hijridate') {
                 finalValA = parseInt(valA, 10);
                 finalValB = parseInt(valB, 10);
                 if (isNaN(finalValA) && isNaN(finalValB)) return 0;
@@ -375,7 +375,7 @@
                     React.createElement('option', { value: 'date' }, 'مرتب‌سازی: تاریخ'),
                     React.createElement('option', { value: 'id' }, 'مرتب‌سازی: شماره راهنما'),
                     React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ'),
-                    React.createElement('option', { value: 'hijridate' }, 'مرتب‌سازی: تاریخ قمری') {/* Added hijridate to sort options */}
+                    React.createElement('option', { value: 'hijridate' }, 'مرتب‌سازی: تاریخ قمری')
                 ),
                 React.createElement('button', {
                     onClick: handleSortOrderToggle,
