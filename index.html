@@ -26,8 +26,12 @@
       const [searchTerm, setSearchTerm] = useState('');
       const [filteredBooks, setFilteredBooks] = useState([]);
       const [loading, setLoading] = useState(true);
-      const [sortByKey, setSortByKey] = useState('catid'); // Default sort by catid
-      const [sortOrder, setSortOrder] = useState('asc'); // Default ascending
+      const [sortByKey, setSortByKey] = useState('catid');
+      const [sortOrder, setSortOrder] = useState('asc');
+      const [authorBreakdown, setAuthorBreakdown] = useState([]);
+      const [dateBreakdown, setDateBreakdown] = useState([]);
+      const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('همه');
+      const [selectedDateFilter, setSelectedDateFilter] = useState('همه');
 
       useEffect(() => {
         const fetchData = async () => {
@@ -54,66 +58,121 @@
 
         const q = searchTerm.toLowerCase().trim();
 
-        // اگر کادر جستجو خالی است، هیچ نتیجه‌ای نمایش نده
         if (q === '') {
             setFilteredBooks([]);
+            setAuthorBreakdown([]);
+            setDateBreakdown([]);
             return;
         }
 
-        // اعمال فیلتر جستجو
         currentFiltered = currentFiltered.filter(book =>
           (book.title || '').toLowerCase().includes(q) ||
           (book.author || '').toLowerCase().includes(q) ||
           (book.id || '').toLowerCase().includes(q)
         );
 
-        // مرتب‌سازی نتایج
+        if (selectedAuthorFilter !== 'همه') {
+            currentFiltered = currentFiltered.filter(book => book.author === selectedAuthorFilter);
+        }
+
+        if (selectedDateFilter !== 'همه') {
+            currentFiltered = currentFiltered.filter(book => book.date === selectedDateFilter);
+        }
+
+        const newAuthorCounts = {};
+        const newDateCounts = {};
+        currentFiltered.forEach(book => {
+            if (book.author) {
+                newAuthorCounts[book.author] = (newAuthorCounts[book.author] || 0) + 1;
+            }
+            if (book.date) {
+                newDateCounts[book.date] = (newDateCounts[book.date] || 0) + 1;
+            }
+        });
+
+        const displayAuthorCounts = Object.entries(newAuthorCounts)
+            .filter(([, count]) => count >= 2)
+            .sort((a, b) => b[1] - a[1]);
+
+        const displayDateCounts = Object.entries(newDateCounts)
+            .filter(([, count]) => count >= 2)
+            .sort((a, b) => b[1] - a[1]);
+
+        setAuthorBreakdown(displayAuthorCounts);
+        setDateBreakdown(displayDateCounts);
+
+
         currentFiltered.sort((a, b) => {
             let valA, valB;
 
             switch (sortByKey) {
                 case 'author':
-                    valA = (a.author || '').toLowerCase();
-                    valB = (b.author || '').toLowerCase();
+                    valA = a.author;
+                    valB = b.author;
                     break;
                 case 'date':
-                    valA = (a.date || '').toLowerCase(); // Treat date as string for sorting
-                    valB = (b.date || '').toLowerCase();
+                    valA = a.date;
+                    valB = b.date;
                     break;
                 case 'id':
-                    valA = parseInt(a.id, 10) || 0;
-                    valB = parseInt(b.id, 10) || 0;
+                    valA = a.id;
+                    valB = b.id;
                     break;
                 case 'catid':
-                    valA = parseInt(a.catid, 10) || 0;
-                    valB = parseInt(b.catid, 10) || 0;
+                    valA = a.catid;
+                    valB = b.catid;
                     break;
                 case 'title':
                 default:
-                    valA = (a.title || '').toLowerCase();
-                    valB = (b.title || '').toLowerCase();
+                    valA = a.title;
+                    valB = b.title;
                     break;
             }
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return sortOrder === 'asc' ? valA - valB : valB - valA;
+            const isANullish = valA === null || valA === undefined || String(valA).trim() === '';
+            const isBNullish = valB === null || valB === undefined || String(valB).trim() === '';
+
+            if (isANullish && isBNullish) return 0;
+            if (isANullish) return sortOrder === 'asc' ? 1 : -1;
+            if (isBNullish) return sortOrder === 'asc' ? -1 : 1;
+
+            let finalValA = valA;
+            let finalValB = valB;
+
+            if (sortByKey === 'id' || sortByKey === 'catid') {
+                finalValA = parseInt(valA, 10);
+                finalValB = parseInt(valB, 10);
+                if (isNaN(finalValA) && isNaN(finalValB)) return 0;
+                if (isNaN(finalValA)) return sortOrder === 'asc' ? 1 : -1;
+                if (isNaN(finalValB)) return sortOrder === 'asc' ? -1 : 1;
+                return sortOrder === 'asc' ? finalValA - finalValB : finalValB - finalValA;
             } else {
-                const comparison = valA.localeCompare(valB, 'fa', { sensitivity: 'base' });
+                finalValA = String(valA).toLowerCase();
+                finalValB = String(valB).toLowerCase();
+                const comparison = finalValA.localeCompare(finalValB, 'fa', { sensitivity: 'base' });
                 return sortOrder === 'asc' ? comparison : -comparison;
             }
         });
 
-        setFilteredBooks(currentFiltered.slice(0, 200)); // محدودیت ۲۰۰ نتیجه
-      }, [books, searchTerm, sortByKey, sortOrder]); // وابستگی به searchTerm و sort states
+        if (q.length <= 3) {
+            setFilteredBooks(currentFiltered.slice(0, 200));
+        } else {
+            setFilteredBooks(currentFiltered);
+        }
+      }, [books, searchTerm, sortByKey, sortOrder, selectedAuthorFilter, selectedDateFilter]);
 
       const handleSearchChange = (event) => {
         setSearchTerm(event.target.value);
+        setSelectedAuthorFilter('همه');
+        setSelectedDateFilter('همه');
       };
 
       const handleClearSearch = () => {
         setSearchTerm('');
-        setSortByKey('catid'); // ریست کردن مرتب‌سازی به حالت پیش‌فرض
+        setSortByKey('catid');
         setSortOrder('asc');
+        setSelectedAuthorFilter('همه');
+        setSelectedDateFilter('همه');
       };
 
       const handleSortOrderToggle = () => {
@@ -140,26 +199,17 @@
             }, 'پاک کردن')
           ),
           React.createElement('div', { className: 'flex flex-wrap gap-2 mb-4 justify-center' },
-            React.createElement('button', {
-                onClick: () => setSortByKey('title'),
-                className: `px-4 py-2 rounded-lg ${sortByKey === 'title' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
-            }, 'مرتب‌سازی: عنوان'),
-            React.createElement('button', {
-                onClick: () => setSortByKey('author'),
-                className: `px-4 py-2 rounded-lg ${sortByKey === 'author' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
-            }, 'مرتب‌سازی: پدیدآور'),
-            React.createElement('button', {
-                onClick: () => setSortByKey('date'),
-                className: `px-4 py-2 rounded-lg ${sortByKey === 'date' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
-            }, 'مرتب‌سازی: تاریخ'),
-            React.createElement('button', {
-                onClick: () => setSortByKey('id'),
-                className: `px-4 py-2 rounded-lg ${sortByKey === 'id' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
-            }, 'مرتب‌سازی: شماره راهنما'),
-            React.createElement('button', {
-                onClick: () => setSortByKey('catid'),
-                className: `px-4 py-2 rounded-lg ${sortByKey === 'catid' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
-            }, 'مرتب‌سازی: آی‌دی کاتالوگ'),
+            React.createElement('select', {
+                value: sortByKey,
+                onChange: e => setSortByKey(e.target.value),
+                className: 'px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition cursor-pointer'
+            },
+                React.createElement('option', { value: 'title' }, 'مرتب‌سازی: عنوان'),
+                React.createElement('option', { value: 'author' }, 'مرتب‌سازی: پدیدآور'),
+                React.createElement('option', { value: 'date' }, 'مرتب‌سازی: تاریخ'),
+                React.createElement('option', { value: 'id' }, 'مرتب‌سازی: شماره راهنما'),
+                React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ')
+            ),
             React.createElement('button', {
                 onClick: handleSortOrderToggle,
                 className: 'px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition shadow-md'
@@ -170,50 +220,99 @@
           ? React.createElement('div', { className: 'text-center text-gray-600 text-lg' }, 'در حال بارگذاری...')
           : React.createElement(
               'div',
-              { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
-              filteredBooks.length > 0
-                ? `تعداد نتایج یافت شده: ${filteredBooks.length}`
-                : ''
-            ),
-          React.createElement('div', {
-              key: `${searchTerm}-${sortByKey}-${sortOrder}`, // کلید پویا برای اجبار به رندر مجدد
-              className: 'grid grid-cols-1 md:grid-cols-2 gap-4'
-            },
-              filteredBooks.length > 0
-                ? filteredBooks.map((book, index) =>
-                  React.createElement('div', {
-                    key: book.id || index,
-                    className: 'bg-white p-4 rounded-lg shadow border'
+              { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+              React.createElement('div', { className: 'md:col-span-2' },
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
+                    filteredBooks.length > 0
+                        ? `تعداد نتایج یافت شده: ${filteredBooks.length}`
+                        : ''
+                ),
+                React.createElement('div', {
+                    key: `${searchTerm}-${sortByKey}-${sortOrder}-${selectedAuthorFilter}-${selectedDateFilter}`,
+                    className: 'grid grid-cols-1 md:grid-cols-2 gap-4'
                   },
-                    React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
-                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'پدیدآور: ' + (book.author || '')),
-                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')),
-                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'مرکز: ' + (book.db || '')),
-                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'نوع: ' + (book.type || '')),
-                    book.catid && React.createElement('p', { className: 'text-gray-800' },
-                        React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
-                        ' ',
-                        book.id,
-                        React.createElement('span', { className: 'font-medium mr-2' }, ' | لینک کاتالوگ:'),
-                        ' ',
-                        React.createElement(
-                            'a',
-                            {
-                                href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
-                                target: '_blank',
-                                rel: 'noopener noreferrer',
-                                className: 'text-blue-600 hover:underline'
-                            },
-                            book.catid
+                    filteredBooks.length > 0
+                      ? filteredBooks.map((book, index) =>
+                        React.createElement('div', {
+                          key: book.id || index,
+                          className: 'bg-white p-4 rounded-lg shadow border'
+                        },
+                          React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
+                          React.createElement('p', { className: 'text-gray-800 mb-1' }, 'پدیدآور: ' + (book.author || '')),
+                          React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')),
+                          React.createElement('p', { className: 'text-gray-800 mb-1' }, 'مرکز: ' + (book.db || '')),
+                          React.createElement('p', { className: 'text-gray-800 mb-1' }, 'نوع: ' + (book.type || '')),
+                          book.catid && React.createElement('p', { className: 'text-gray-800' },
+                              React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
+                              ' ',
+                              book.id,
+                              React.createElement('span', { className: 'font-medium mr-2' }, ' | لینک کاتالوگ:'),
+                              ' ',
+                              React.createElement(
+                                  'a',
+                                  {
+                                      href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
+                                      target: '_blank',
+                                      rel: 'noopener noreferrer',
+                                      className: 'text-blue-600 hover:underline'
+                                  },
+                                  book.catid
+                              )
+                          )
                         )
-                    )
+                      )
+                      : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
+                          searchTerm.trim() === ''
+                            ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.'
+                            : 'نتیجه‌ای یافت نشد.'
+                        )
                   )
+              ),
+              React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow' },
+                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'بررسی نتایج'),
+                React.createElement('div', { className: 'mb-6' },
+                  React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'پدیدآورندگان پر تکرار:'),
+                  authorBreakdown.length > 0
+                    ? React.createElement('ul', null,
+                        authorBreakdown.map(([author, count]) =>
+                          React.createElement('li', {
+                            key: author,
+                            onClick: () => setSelectedAuthorFilter(author),
+                            className: `cursor-pointer hover:text-blue-600 ${selectedAuthorFilter === author ? 'font-bold text-blue-700' : 'text-gray-600'}`
+                          },
+                            `${author} (${count})`
+                          )
+                        ),
+                        selectedAuthorFilter !== 'همه' && React.createElement('li', {
+                            onClick: () => setSelectedAuthorFilter('همه'),
+                            className: 'cursor-pointer text-red-500 hover:underline mt-2'
+                        }, 'پاک کردن فیلتر پدیدآور')
+                      )
+                    : React.createElement('p', { className: 'text-gray-500' }, 'پدیدآورنده پرتکراری یافت نشد.')
+                ),
+                React.createElement('div', null,
+                  React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'تاریخ‌های نشر پر تکرار:'),
+                  dateBreakdown.length > 0
+                    ? React.createElement('ul', null,
+                        dateBreakdown.map(([date, count]) =>
+                          React.createElement('li', {
+                            key: date,
+                            onClick: () => setSelectedDateFilter(date),
+                            className: `cursor-pointer hover:text-blue-600 ${selectedDateFilter === date ? 'font-bold text-blue-700' : 'text-gray-600'}`
+                          },
+                            `${date} (${count})`
+                          )
+                        ),
+                        selectedDateFilter !== 'همه' && React.createElement('li', {
+                            onClick: () => setSelectedDateFilter('همه'),
+                            className: 'cursor-pointer text-red-500 hover:underline mt-2'
+                        }, 'پاک کردن فیلتر تاریخ')
+                      )
+                    : React.createElement('p', { className: 'text-gray-500' }, 'تاریخ نشر پرتکراری یافت نشد.')
                 )
-                : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
-                    searchTerm.trim() === ''
-                      ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.'
-                      : 'نتیجه‌ای یافت نشد.'
-                  )
+              )
             )
       );
     };
