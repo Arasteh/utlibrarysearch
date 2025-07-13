@@ -6,9 +6,9 @@
   <title>جستجوی کتاب‌های خطی فارسی</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+    /* حذف فونت Inter و اتکا به فونت‌های سیستم */
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: sans-serif; /* استفاده از فونت‌های پیش‌فرض سیستم */
       background-color: #f9fafb;
     }
   </style>
@@ -20,20 +20,17 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <script type="text/javascript">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React; // useRef دیگر لازم نیست
 
     const App = () => {
       const [books, setBooks] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
-      const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
       const [filteredBooks, setFilteredBooks] = useState([]);
       const [selectedType, setSelectedType] = useState('همه');
       const [selectedDb, setSelectedDb] = useState('همه');
       const [types, setTypes] = useState([]);
       const [dbs, setDbs] = useState([]);
       const [loading, setLoading] = useState(true);
-
-      const timerRef = useRef(null);
 
       useEffect(() => {
         const fetchData = async () => {
@@ -60,73 +57,47 @@
         fetchData();
       }, []);
 
-      // Debounce effect for search term
-      useEffect(() => {
-        // Clear any existing timer
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-        }
-
-        // If searchTerm is empty, immediately clear debouncedSearchTerm
-        if (searchTerm.trim() === '') {
-            setDebouncedSearchTerm('');
-        } else {
-            // Otherwise, set a timeout to update debouncedSearchTerm
-            timerRef.current = setTimeout(() => {
-                setDebouncedSearchTerm(searchTerm);
-            }, 300);
-        }
-
-        // Cleanup function: clear the timer if searchTerm changes before the delay
-        return () => {
-          if (timerRef.current) {
-            clearTimeout(timerRef.current);
-          }
-        };
-      }, [searchTerm]);
-
-      // Filtering effect, dependent on debouncedSearchTerm and other filters
+      // فیلتر کردن نتایج بر اساس searchTerm و فیلترهای کشویی
       useEffect(() => {
         let currentFiltered = [...books];
 
-        const q = debouncedSearchTerm.toLowerCase().trim();
+        const q = searchTerm.toLowerCase().trim();
 
-        // If search term is empty or too short, clear results and exit
-        if (q.length < 2) {
+        // اگر کادر جستجو خالی است، هیچ نتیجه‌ای نمایش نده
+        if (q === '') {
             setFilteredBooks([]);
             return;
         }
 
-        // Apply search filtering
+        // اعمال فیلتر جستجو
         currentFiltered = currentFiltered.filter(book =>
           (book.title || '').toLowerCase().includes(q) ||
           (book.author || '').toLowerCase().includes(q) ||
           (book.id || '').toLowerCase().includes(q)
         );
 
-        // Apply type filter
+        // اعمال فیلتر نوع
         if (selectedType !== 'همه') {
           currentFiltered = currentFiltered.filter(book => book.type === selectedType);
         }
 
-        // Apply database filter
+        // اعمال فیلتر پایگاه داده
         if (selectedDb !== 'همه') {
           currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
         }
 
-        // Sort by catid
+        // مرتب‌سازی بر اساس catid
         currentFiltered.sort((a, b) => {
             const catidA = parseInt(a.catid, 10);
             const catidB = parseInt(b.catid, 10);
-            // Handle cases where catid might not be a valid number
             if (isNaN(catidA) && isNaN(catidB)) return 0;
             if (isNaN(catidA)) return 1;
             if (isNaN(catidB)) return -1;
             return catidA - catidB;
         });
 
-        setFilteredBooks(currentFiltered.slice(0, 200));
-      }, [books, debouncedSearchTerm, selectedType, selectedDb]);
+        setFilteredBooks(currentFiltered.slice(0, 200)); // محدودیت ۲۰۰ نتیجه
+      }, [books, searchTerm, selectedType, selectedDb]); // وابستگی به searchTerm به جای debouncedSearchTerm
 
       const handleSearchChange = (event) => {
         setSearchTerm(event.target.value);
@@ -140,19 +111,29 @@
         setSelectedDb(event.target.value);
       };
 
+      const handleClearSearch = () => {
+        setSearchTerm('');
+      };
+
       return React.createElement(
         'div',
         { className: 'p-6 max-w-5xl mx-auto', dir: 'rtl' },
         React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی کتاب‌های خطی فارسی'),
         React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow mb-6' },
-          React.createElement('input', {
-            type: 'text',
-            className: 'w-full mb-4 p-3 border rounded text-lg',
-            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
-            value: searchTerm,
-            onChange: handleSearchChange,
-            dir: 'rtl'
-          }),
+          React.createElement('div', { className: 'flex items-center mb-4' }, // استفاده از فلکس برای کنار هم قرار دادن input و button
+            React.createElement('input', {
+              type: 'text',
+              className: 'flex-grow p-3 border rounded-r-none rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out',
+              placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
+              value: searchTerm,
+              onChange: handleSearchChange,
+              dir: 'rtl'
+            }),
+            React.createElement('button', {
+              onClick: handleClearSearch,
+              className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-l-none rounded-lg transition duration-200 ease-in-out shadow-md'
+            }, 'پاک کردن')
+          ),
           React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
             React.createElement('div', null,
               React.createElement('label', { className: 'block mb-1 text-gray-700 font-medium' }, 'نوع:'),
@@ -206,8 +187,8 @@
                   )
                 )
                 : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
-                    debouncedSearchTerm.length < 2 && searchTerm.length < 2
-                      ? 'برای شروع جستجو، حداقل ۲ حرف وارد کنید.'
+                    searchTerm.trim() === ''
+                      ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.' // پیام برای جستجوی خالی
                       : 'نتیجه‌ای یافت نشد.'
                   )
             )
