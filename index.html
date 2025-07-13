@@ -55,21 +55,20 @@
 
       useEffect(() => {
         let currentFiltered = [...books];
+        let booksForBreakdown = [...books]; // Default to all books for breakdown calculation
 
         const q = searchTerm.toLowerCase().trim();
 
         if (q === '') {
-            setFilteredBooks([]);
-            setAuthorBreakdown([]);
-            setDateBreakdown([]);
-            return;
+            setFilteredBooks([]); // Main results are empty if search is empty
+        } else {
+            currentFiltered = currentFiltered.filter(book =>
+                (book.title || '').toLowerCase().includes(q) ||
+                (book.author || '').toLowerCase().includes(q) ||
+                (book.id || '').toLowerCase().includes(q)
+            );
+            booksForBreakdown = currentFiltered; // Breakdown is based on filtered results when search is active
         }
-
-        currentFiltered = currentFiltered.filter(book =>
-          (book.title || '').toLowerCase().includes(q) ||
-          (book.author || '').toLowerCase().includes(q) ||
-          (book.id || '').toLowerCase().includes(q)
-        );
 
         if (selectedAuthorFilter !== 'همه') {
             currentFiltered = currentFiltered.filter(book => book.author === selectedAuthorFilter);
@@ -81,7 +80,7 @@
 
         const newAuthorCounts = {};
         const newDateCounts = {};
-        currentFiltered.forEach(book => {
+        booksForBreakdown.forEach(book => {
             if (book.author) {
                 newAuthorCounts[book.author] = (newAuthorCounts[book.author] || 0) + 1;
             }
@@ -90,17 +89,19 @@
             }
         });
 
+        const authorMinCount = q === '' ? 10 : 2;
+        const dateMinCount = q === '' ? 10 : 2;
+
         const displayAuthorCounts = Object.entries(newAuthorCounts)
-            .filter(([, count]) => count >= 2)
+            .filter(([, count]) => count >= authorMinCount)
             .sort((a, b) => b[1] - a[1]);
 
         const displayDateCounts = Object.entries(newDateCounts)
-            .filter(([, count]) => count >= 2)
+            .filter(([, count]) => count >= dateMinCount)
             .sort((a, b) => b[1] - a[1]);
 
         setAuthorBreakdown(displayAuthorCounts);
         setDateBreakdown(displayDateCounts);
-
 
         currentFiltered.sort((a, b) => {
             let valA, valB;
@@ -154,10 +155,10 @@
             }
         });
 
-        if (q.length <= 3) {
-            setFilteredBooks(currentFiltered.slice(0, 200));
-        } else {
+        if (q.length > 3) {
             setFilteredBooks(currentFiltered);
+        } else {
+            setFilteredBooks(currentFiltered.slice(0, 200));
         }
       }, [books, searchTerm, sortByKey, sortOrder, selectedAuthorFilter, selectedDateFilter]);
 
