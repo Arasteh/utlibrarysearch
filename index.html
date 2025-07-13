@@ -6,9 +6,8 @@
   <title>جستجوی کتاب‌های خطی فارسی</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* حذف فونت Inter و اتکا به فونت‌های سیستم */
     body {
-      font-family: sans-serif; /* استفاده از فونت‌های پیش‌فرض سیستم */
+      font-family: sans-serif;
       background-color: #f9fafb;
     }
   </style>
@@ -26,11 +25,9 @@
       const [books, setBooks] = useState([]);
       const [searchTerm, setSearchTerm] = useState('');
       const [filteredBooks, setFilteredBooks] = useState([]);
-      const [selectedType, setSelectedType] = useState('همه');
-      const [selectedDb, setSelectedDb] = useState('همه');
-      const [types, setTypes] = useState([]);
-      const [dbs, setDbs] = useState([]);
       const [loading, setLoading] = useState(true);
+      const [sortByKey, setSortByKey] = useState('catid'); // Default sort by catid
+      const [sortOrder, setSortOrder] = useState('asc'); // Default ascending
 
       useEffect(() => {
         const fetchData = async () => {
@@ -42,11 +39,6 @@
             }
             const data = await response.json();
             setBooks(data);
-
-            const uniqueTypes = [...new Set(data.map(book => book.type))].sort();
-            const uniqueDbs = [...new Set(data.map(book => book.db))].sort();
-            setTypes(['همه', ...uniqueTypes]);
-            setDbs(['همه', ...uniqueDbs]);
           } catch (error) {
             console.error('خطا در بارگذاری داده‌ها:', error);
           } finally {
@@ -57,10 +49,7 @@
         fetchData();
       }, []);
 
-      // فیلتر کردن نتایج بر اساس searchTerm و فیلترهای کشویی
       useEffect(() => {
-        console.log('useEffect فیلتر در حال اجرا. عبارت جستجو:', searchTerm);
-
         let currentFiltered = [...books];
 
         const q = searchTerm.toLowerCase().trim();
@@ -68,7 +57,6 @@
         // اگر کادر جستجو خالی است، هیچ نتیجه‌ای نمایش نده
         if (q === '') {
             setFilteredBooks([]);
-            console.log('عبارت جستجو خالی است. نتایج پاک شد.');
             return;
         }
 
@@ -79,46 +67,57 @@
           (book.id || '').toLowerCase().includes(q)
         );
 
-        // اعمال فیلتر نوع
-        if (selectedType !== 'همه') {
-          currentFiltered = currentFiltered.filter(book => book.type === selectedType);
-        }
-
-        // اعمال فیلتر پایگاه داده
-        if (selectedDb !== 'همه') {
-          currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
-        }
-
-        // مرتب‌سازی بر اساس catid
+        // مرتب‌سازی نتایج
         currentFiltered.sort((a, b) => {
-            const catidA = parseInt(a.catid, 10);
-            const catidB = parseInt(b.catid, 10);
-            if (isNaN(catidA) && isNaN(catidB)) return 0;
-            if (isNaN(catidA)) return 1;
-            if (isNaN(catidB)) return -1;
-            return catidA - catidB;
+            let valA, valB;
+
+            switch (sortByKey) {
+                case 'author':
+                    valA = (a.author || '').toLowerCase();
+                    valB = (b.author || '').toLowerCase();
+                    break;
+                case 'date':
+                    valA = (a.date || '').toLowerCase(); // Treat date as string for sorting
+                    valB = (b.date || '').toLowerCase();
+                    break;
+                case 'id':
+                    valA = parseInt(a.id, 10) || 0;
+                    valB = parseInt(b.id, 10) || 0;
+                    break;
+                case 'catid':
+                    valA = parseInt(a.catid, 10) || 0;
+                    valB = parseInt(b.catid, 10) || 0;
+                    break;
+                case 'title':
+                default:
+                    valA = (a.title || '').toLowerCase();
+                    valB = (b.title || '').toLowerCase();
+                    break;
+            }
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return sortOrder === 'asc' ? valA - valB : valB - valA;
+            } else {
+                const comparison = valA.localeCompare(valB, 'fa', { sensitivity: 'base' });
+                return sortOrder === 'asc' ? comparison : -comparison;
+            }
         });
 
         setFilteredBooks(currentFiltered.slice(0, 200)); // محدودیت ۲۰۰ نتیجه
-        console.log('نتایج فیلتر شده به‌روزرسانی شد. تعداد نتایج:', currentFiltered.slice(0, 200).length);
-      }, [books, searchTerm, selectedType, selectedDb]); // وابستگی به searchTerm
+      }, [books, searchTerm, sortByKey, sortOrder]); // وابستگی به searchTerm و sort states
 
       const handleSearchChange = (event) => {
         setSearchTerm(event.target.value);
       };
 
-      const handleTypeChange = (event) => {
-        setSelectedType(event.target.value);
-      };
-
-      const handleDbChange = (event) => {
-        setSelectedDb(event.target.value);
-      };
-
       const handleClearSearch = () => {
         setSearchTerm('');
-        setSelectedType('همه'); // ریست کردن فیلتر نوع
-        setSelectedDb('همه');   // ریست کردن فیلتر پایگاه داده
+        setSortByKey('catid'); // ریست کردن مرتب‌سازی به حالت پیش‌فرض
+        setSortOrder('asc');
+      };
+
+      const handleSortOrderToggle = () => {
+        setSortOrder(prevOrder => prevOrder === 'asc' ? 'desc' : 'asc');
       };
 
       return React.createElement(
@@ -130,7 +129,7 @@
             React.createElement('input', {
               type: 'text',
               className: 'flex-grow p-3 border rounded-r-none rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out',
-              placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
+              placeholder: 'جستجو بر اساس عنوان، پدیدآور یا شماره راهنما...',
               value: searchTerm,
               onChange: handleSearchChange,
               dir: 'rtl'
@@ -138,31 +137,46 @@
             React.createElement('button', {
               onClick: handleClearSearch,
               className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-l-none rounded-lg transition duration-200 ease-in-out shadow-md'
-            }, 'پاک کردن فیلترها')
+            }, 'پاک کردن')
           ),
-          React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-            React.createElement('div', null,
-              React.createElement('label', { className: 'block mb-1 text-gray-700 font-medium' }, 'نوع:'),
-              React.createElement('select', {
-                className: 'w-full p-2 border rounded',
-                value: selectedType,
-                onChange: handleTypeChange
-              }, types.map(type => React.createElement('option', { key: type, value: type }, type)))
-            ),
-            React.createElement('div', null,
-              React.createElement('label', { className: 'block mb-1 text-gray-700 font-medium' }, 'مرکز:'),
-              React.createElement('select', {
-                className: 'w-full p-2 border rounded',
-                value: selectedDb,
-                onChange: handleDbChange
-              }, dbs.map(db => React.createElement('option', { key: db, value: db }, db)))
-            )
+          React.createElement('div', { className: 'flex flex-wrap gap-2 mb-4 justify-center' },
+            React.createElement('button', {
+                onClick: () => setSortByKey('title'),
+                className: `px-4 py-2 rounded-lg ${sortByKey === 'title' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
+            }, 'مرتب‌سازی: عنوان'),
+            React.createElement('button', {
+                onClick: () => setSortByKey('author'),
+                className: `px-4 py-2 rounded-lg ${sortByKey === 'author' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
+            }, 'مرتب‌سازی: پدیدآور'),
+            React.createElement('button', {
+                onClick: () => setSortByKey('date'),
+                className: `px-4 py-2 rounded-lg ${sortByKey === 'date' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
+            }, 'مرتب‌سازی: تاریخ'),
+            React.createElement('button', {
+                onClick: () => setSortByKey('id'),
+                className: `px-4 py-2 rounded-lg ${sortByKey === 'id' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
+            }, 'مرتب‌سازی: شماره راهنما'),
+            React.createElement('button', {
+                onClick: () => setSortByKey('catid'),
+                className: `px-4 py-2 rounded-lg ${sortByKey === 'catid' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-blue-500 hover:text-white transition`
+            }, 'مرتب‌سازی: آی‌دی کاتالوگ'),
+            React.createElement('button', {
+                onClick: handleSortOrderToggle,
+                className: 'px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition shadow-md'
+            }, sortOrder === 'asc' ? 'ترتیب: صعودی' : 'ترتیب: نزولی')
           )
         ),
         loading
           ? React.createElement('div', { className: 'text-center text-gray-600 text-lg' }, 'در حال بارگذاری...')
-          : React.createElement('div', {
-              key: `${searchTerm}-${selectedType}-${selectedDb}`, // کلید پویا برای اجبار به رندر مجدد
+          : React.createElement(
+              'div',
+              { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
+              filteredBooks.length > 0
+                ? `تعداد نتایج یافت شده: ${filteredBooks.length}`
+                : ''
+            ),
+          React.createElement('div', {
+              key: `${searchTerm}-${sortByKey}-${sortOrder}`, // کلید پویا برای اجبار به رندر مجدد
               className: 'grid grid-cols-1 md:grid-cols-2 gap-4'
             },
               filteredBooks.length > 0
