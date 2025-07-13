@@ -32,8 +32,8 @@
       const [dateBreakdown, setDateBreakdown] = useState([]);
       const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('همه');
       const [selectedDateFilter, setSelectedDateFilter] = useState('همه');
-      const [showAllAuthors, setShowAllAuthors] = useState(false); // New state for showing all authors
-      const [showAllDates, setShowAllDates] = useState(false);     // New state for showing all dates
+      const [showAllAuthors, setShowAllAuthors] = useState(false);
+      const [showAllDates, setShowAllDates] = useState(false);
 
       useEffect(() => {
         const fetchData = async () => {
@@ -168,8 +168,8 @@
         setSearchTerm(event.target.value);
         setSelectedAuthorFilter('همه');
         setSelectedDateFilter('همه');
-        setShowAllAuthors(false); // Reset show all on new search
-        setShowAllDates(false);   // Reset show all on new search
+        setShowAllAuthors(false);
+        setShowAllDates(false);
       };
 
       const handleClearSearch = () => {
@@ -191,92 +191,10 @@
 
       return React.createElement(
         'div',
-        { className: 'p-6 max-w-5xl mx-auto', dir: 'rtl' },
+        { className: 'p-6 max-w-7xl mx-auto', dir: 'rtl' }, {/* Increased max-width */}
         React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی کتاب‌های خطی فارسی'),
-        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' }, // Main grid for layout
-          React.createElement('div', { className: 'md:col-span-3' }, // Left column for search and results
-            React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow mb-6' },
-              React.createElement('div', { className: 'flex items-center mb-4' },
-                React.createElement('input', {
-                  type: 'text',
-                  className: 'flex-grow p-3 border rounded-r-none rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out',
-                  placeholder: 'جستجو بر اساس عنوان، پدیدآور یا شماره راهنما...',
-                  value: searchTerm,
-                  onChange: handleSearchChange,
-                  dir: 'rtl'
-                }),
-                React.createElement('button', {
-                  onClick: handleClearSearch,
-                  className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-l-none rounded-lg transition duration-200 ease-in-out shadow-md'
-                }, 'پاک کردن')
-              ),
-              React.createElement('div', { className: 'flex flex-wrap gap-2 mb-4 justify-center' },
-                React.createElement('select', {
-                    value: sortByKey,
-                    onChange: e => setSortByKey(e.target.value),
-                    className: 'px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition cursor-pointer'
-                },
-                    React.createElement('option', { value: 'title' }, 'مرتب‌سازی: عنوان'),
-                    React.createElement('option', { value: 'author' }, 'مرتب‌سازی: پدیدآور'),
-                    React.createElement('option', { value: 'date' }, 'مرتب‌سازی: تاریخ'),
-                    React.createElement('option', { value: 'id' }, 'مرتب‌سازی: شماره راهنما'),
-                    React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ')
-                ),
-                React.createElement('button', {
-                    onClick: handleSortOrderToggle,
-                    className: 'px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition shadow-md'
-                }, sortOrder === 'asc' ? 'ترتیب: صعودی' : 'ترتیب: نزولی')
-              )
-            ),
-            React.createElement(
-                'div',
-                { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
-                filteredBooks.length > 0
-                    ? `تعداد نتایج یافت شده: ${filteredBooks.length}`
-                    : ''
-            ),
-            React.createElement('div', {
-                key: `${searchTerm}-${sortByKey}-${sortOrder}-${selectedAuthorFilter}-${selectedDateFilter}`,
-                className: 'grid grid-cols-1 md:grid-cols-2 gap-4'
-              },
-                filteredBooks.length > 0
-                  ? filteredBooks.map((book, index) =>
-                    React.createElement('div', {
-                      key: book.id || index,
-                      className: 'bg-white p-4 rounded-lg shadow border'
-                    },
-                      React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'پدیدآور: ' + (book.author || '')),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'مرکز: ' + (book.db || '')),
-                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'نوع: ' + (book.type || '')),
-                      book.catid && React.createElement('p', { className: 'text-gray-800' },
-                          React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
-                          ' ',
-                          book.id,
-                          React.createElement('span', { className: 'font-medium mr-2' }, ' | لینک کاتالوگ:'),
-                          ' ',
-                          React.createElement(
-                              'a',
-                              {
-                                  href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
-                                  target: '_blank',
-                                  rel: 'noopener noreferrer',
-                                  className: 'text-blue-600 hover:underline'
-                              },
-                              book.catid
-                          )
-                      )
-                    )
-                  )
-                  : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
-                      searchTerm.trim() === ''
-                        ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.'
-                        : 'نتیجه‌ای یافت نشد.'
-                    )
-              )
-          ),
-          React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow' }, // Right column for sidebar
+        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' }, {/* Main grid for layout */}
+          React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow order-first md:order-last' }, {/* Sidebar - Moved to first column, order-last for md screens to push it right */}
             React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'بررسی نتایج'),
             React.createElement('div', { className: 'mb-6 p-4 border rounded-lg bg-gray-50' },
               React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'پدیدآورندگان پر تکرار:'),
@@ -326,6 +244,88 @@
                   )
                 : React.createElement('p', { className: 'text-gray-500' }, 'تاریخ نشر پرتکراری یافت نشد.')
             )
+          ),
+          React.createElement('div', { className: 'md:col-span-3' }, {/* Right column for search and results */}
+            React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow mb-6' },
+              React.createElement('div', { className: 'flex items-center mb-4' },
+                React.createElement('input', {
+                  type: 'text',
+                  className: 'flex-grow p-3 border rounded-r-none rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out',
+                  placeholder: 'جستجو بر اساس عنوان، پدیدآور یا شماره راهنما...',
+                  value: searchTerm,
+                  onChange: handleSearchChange,
+                  dir: 'rtl'
+                }),
+                React.createElement('button', {
+                  onClick: handleClearSearch,
+                  className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-l-none rounded-lg transition duration-200 ease-in-out shadow-md'
+                }, 'پاک کردن')
+              ),
+              React.createElement('div', { className: 'flex flex-wrap gap-2 mb-4 justify-center' },
+                React.createElement('select', {
+                    value: sortByKey,
+                    onChange: e => setSortByKey(e.target.value),
+                    className: 'px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition cursor-pointer'
+                },
+                    React.createElement('option', { value: 'title' }, 'مرتب‌سازی: عنوان'),
+                    React.createElement('option', { value: 'author' }, 'مرتب‌سازی: پدیدآور'),
+                    React.createElement('option', { value: 'date' }, 'مرتب‌سازی: تاریخ'),
+                    React.createElement('option', { value: 'id' }, 'مرتب‌سازی: شماره راهنما'),
+                    React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ')
+                ),
+                React.createElement('button', {
+                    onClick: handleSortOrderToggle,
+                    className: 'px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition shadow-md'
+                }, sortOrder === 'asc' ? 'ترتیب: صعودی' : 'ترتیب: نزولی')
+              )
+            ),
+            React.createElement(
+                'div',
+                { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
+                filteredBooks.length > 0
+                    ? `تعداد نتایج یافت شده: ${filteredBooks.length}`
+                    : ''
+            ),
+            React.createElement('div', {
+                key: `${searchTerm}-${sortByKey}-${sortOrder}-${selectedAuthorFilter}-${selectedDateFilter}`,
+                className: 'grid grid-cols-1 md:grid-cols-3 gap-4' {/* Changed to grid-cols-3 */}
+              },
+                filteredBooks.length > 0
+                  ? filteredBooks.map((book, index) =>
+                    React.createElement('div', {
+                      key: book.id || index,
+                      className: 'bg-white p-4 rounded-lg shadow border'
+                    },
+                      React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
+                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'پدیدآور: ' + (book.author || '')),
+                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')),
+                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'مرکز: ' + (book.db || '')),
+                      React.createElement('p', { className: 'text-gray-800 mb-1' }, 'نوع: ' + (book.type || '')),
+                      book.catid && React.createElement('p', { className: 'text-gray-800' },
+                          React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
+                          ' ',
+                          book.id,
+                          React.createElement('span', { className: 'font-medium mr-2' }, ' | لینک کاتالوگ:'),
+                          ' ',
+                          React.createElement(
+                              'a',
+                              {
+                                  href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
+                                  target: '_blank',
+                                  rel: 'noopener noreferrer',
+                                  className: 'text-blue-600 hover:underline'
+                              },
+                              book.catid
+                          )
+                      )
+                    )
+                  )
+                  : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
+                      searchTerm.trim() === ''
+                        ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.'
+                        : 'نتیجه‌ای یافت نشد.'
+                    )
+              )
           )
         )
       );
