@@ -19,7 +19,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <script type="text/javascript">
-        const { useState, useEffect, useRef } = React; // Add useRef
+        const { useState, useEffect, useRef } = React;
 
         const App = () => {
             const [books, setBooks] = useState([]);
@@ -32,12 +32,13 @@
             const [dbs, setDbs] = useState([]);
             const [loading, setLoading] = useState(true);
 
-            const timerRef = useRef(null); // Ref to store the timeout ID
+            const timerRef = useRef(null);
 
             useEffect(() => {
                 const fetchData = async () => {
                     setLoading(true);
                     try {
+                        // Changed the data file path as per user's instruction
                         const response = await fetch('./utlibrary-manuscripts.json');
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
@@ -60,29 +61,27 @@
                 fetchData();
             }, []);
 
-            // Debounce effect for search term using useRef
+            // Debounce effect for search term
             useEffect(() => {
-                // Clear any existing timer when searchTerm changes
                 if (timerRef.current) {
                     clearTimeout(timerRef.current);
                 }
 
-                // Set a new timer
                 timerRef.current = setTimeout(() => {
                     setDebouncedSearchTerm(searchTerm);
                 }, 300);
 
-                // Cleanup function: clear the timer if the component unmounts or searchTerm changes again
                 return () => {
                     if (timerRef.current) {
                         clearTimeout(timerRef.current);
                     }
                 };
-            }, [searchTerm]); // Dependency array: re-run this effect when searchTerm changes
+            }, [searchTerm]);
 
             useEffect(() => {
                 let currentFiltered = [];
 
+                // Apply search filtering only if debouncedSearchTerm has at least 2 characters
                 if (debouncedSearchTerm.length >= 2) {
                     const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase();
                     currentFiltered = books.filter(book =>
@@ -91,13 +90,15 @@
                         ((book.id || '').toLowerCase().includes(lowerCaseSearchTerm))
                     );
                 } else {
-                    currentFiltered = [];
+                    currentFiltered = []; // No results if search term is too short
                 }
 
+                // Apply type filter
                 if (selectedType && selectedType !== 'همه') {
                     currentFiltered = currentFiltered.filter(book => book.type === selectedType);
                 }
 
+                // Apply database filter
                 if (selectedDb && selectedDb !== 'همه') {
                     currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
                 }
