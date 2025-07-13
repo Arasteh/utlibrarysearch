@@ -19,6 +19,12 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <script type="text/javascript">
+    // Helper function to convert Latin digits to Persian digits
+    const toPersianDigits = (num) => {
+        const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        return String(num).replace(/\d/g, digit => persianDigits[digit]);
+    };
+
     // Helper function to format Hijri date
     const formatHijriDate = (hijridate, weekday) => {
         if (!hijridate) return '';
@@ -42,12 +48,24 @@
             'رجب', 'شعبان', 'رمضان', 'شوال', 'ذی‌القعده', 'ذی‌الحجه'
         ];
 
+        const persianWeekdays = {
+            'Saturday': 'شنبه',
+            'Sunday': 'یکشنبه',
+            'Monday': 'دوشنبه',
+            'Tuesday': 'سه‌شنبه',
+            'Wednesday': 'چهارشنبه',
+            'Thursday': 'پنج‌شنبه',
+            'Friday': 'جمعه'
+            // Add other variations if necessary, e.g., 'Sun': 'یکشنبه'
+        };
+
         const monthName = hijriMonths[month] || String(month);
 
-        let formattedDate = `${day} ${monthName} ${year}`;
+        let formattedDate = `${toPersianDigits(day)} ${monthName} ${toPersianDigits(year)}`;
 
         if (weekday && weekday.trim() !== '') {
-            formattedDate = `${weekday} ${formattedDate}`;
+            const persianWeekday = persianWeekdays[weekday] || weekday; // Use mapping or original if not found
+            formattedDate = `${persianWeekday} ${formattedDate}`;
         }
 
         return `(${formattedDate})`;
@@ -70,13 +88,13 @@
       const [sortOrder, setSortOrder] = useState('asc');
       const [authorBreakdown, setAuthorBreakdown] = useState([]);
       const [dateBreakdown, setDateBreakdown] = useState([]);
-      const [hijriDateBreakdown, setHijriDateBreakdown] = useState([]); // New state for Hijri date breakdown
+      const [hijriDateBreakdown, setHijriDateBreakdown] = useState([]);
       const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('همه');
       const [selectedDateFilter, setSelectedDateFilter] = useState('همه');
-      const [selectedHijriDateFilter, setSelectedHijriDateFilter] = useState('همه'); // New filter state
+      const [selectedHijriDateFilter, setSelectedHijriDateFilter] = useState('همه');
       const [showAllAuthors, setShowAllAuthors] = useState(false);
       const [showAllDates, setShowAllDates] = useState(false);
-      const [showAllHijriDates, setShowAllHijriDates] = useState(false); // New state for showing all Hijri dates
+      const [showAllHijriDates, setShowAllHijriDates] = useState(false);
 
       useEffect(() => {
         const fetchData = async () => {
@@ -252,7 +270,7 @@
 
       return React.createElement(
         'div',
-        { className: 'p-6 max-w-screen-xl mx-auto', dir: 'rtl' }, // Increased max-width to screen-xl
+        { className: 'p-6 max-w-screen-xl mx-auto', dir: 'rtl' },
         React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی کتاب‌های خطی فارسی'),
         React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
           React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow order-first md:order-last' },
@@ -267,7 +285,7 @@
                         onClick: () => setSelectedAuthorFilter(author),
                         className: `cursor-pointer hover:text-blue-600 ${selectedAuthorFilter === author ? 'font-bold text-blue-700' : 'text-gray-600'}`
                       },
-                        `${author} (${count})`
+                        `${author} (${toPersianDigits(count)})`
                       )
                     ),
                     authorBreakdown.length > 10 && !showAllAuthors && React.createElement('li', {
@@ -291,7 +309,7 @@
                         onClick: () => setSelectedDateFilter(date),
                         className: `cursor-pointer hover:text-blue-600 ${selectedDateFilter === date ? 'font-bold text-blue-700' : 'text-gray-600'}`
                       },
-                        `${date} (${count})`
+                        `${date} (${toPersianDigits(count)})`
                       )
                     ),
                     dateBreakdown.length > 10 && !showAllDates && React.createElement('li', {
@@ -305,7 +323,7 @@
                   )
                 : React.createElement('p', { className: 'text-gray-500' }, 'تاریخ نشر پرتکراری یافت نشد.')
             ),
-            React.createElement('div', { className: 'p-4 border rounded-lg bg-gray-50' }, // New section for Hijri date breakdown
+            React.createElement('div', { className: 'p-4 border rounded-lg bg-gray-50' },
               React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'سال‌های قمری پر تکرار:'),
               hijriDatesToShow.length > 0
                 ? React.createElement('ul', null,
@@ -315,7 +333,7 @@
                         onClick: () => setSelectedHijriDateFilter(year),
                         className: `cursor-pointer hover:text-blue-600 ${selectedHijriDateFilter === year ? 'font-bold text-blue-700' : 'text-gray-600'}`
                       },
-                        `${year} (${count})`
+                        `${toPersianDigits(year)} (${toPersianDigits(count)})`
                       )
                     ),
                     hijriDateBreakdown.length > 10 && !showAllHijriDates && React.createElement('li', {
@@ -368,7 +386,7 @@
                 'div',
                 { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
                 filteredBooks.length > 0
-                    ? `تعداد نتایج یافت شده: ${filteredBooks.length}`
+                    ? `تعداد نتایج یافت شده: ${toPersianDigits(filteredBooks.length)}`
                     : ''
             ),
             React.createElement('div', {
