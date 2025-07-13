@@ -19,12 +19,12 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <script type="text/javascript">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React; // Add useRef
 
         const App = () => {
             const [books, setBooks] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
-            const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // New state for debounced term
+            const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
             const [filteredBooks, setFilteredBooks] = useState([]);
             const [selectedType, setSelectedType] = useState('همه');
             const [selectedDb, setSelectedDb] = useState('همه');
@@ -32,11 +32,13 @@
             const [dbs, setDbs] = useState([]);
             const [loading, setLoading] = useState(true);
 
+            const timerRef = useRef(null); // Ref to store the timeout ID
+
             useEffect(() => {
                 const fetchData = async () => {
                     setLoading(true);
                     try {
-                        const response = await fetch('./utlibrary-manuscripts.json');
+                        const response = await fetch('./data/data.json');
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
@@ -58,21 +60,29 @@
                 fetchData();
             }, []);
 
-            // Debounce effect for search term
+            // Debounce effect for search term using useRef
             useEffect(() => {
-                const handler = setTimeout(() => {
-                    setDebouncedSearchTerm(searchTerm);
-                }, 300); // 300ms debounce delay
+                // Clear any existing timer when searchTerm changes
+                if (timerRef.current) {
+                    clearTimeout(timerRef.current);
+                }
 
+                // Set a new timer
+                timerRef.current = setTimeout(() => {
+                    setDebouncedSearchTerm(searchTerm);
+                }, 300);
+
+                // Cleanup function: clear the timer if the component unmounts or searchTerm changes again
                 return () => {
-                    clearTimeout(handler);
+                    if (timerRef.current) {
+                        clearTimeout(timerRef.current);
+                    }
                 };
-            }, [searchTerm]); // Only re-run if searchTerm changes
+            }, [searchTerm]); // Dependency array: re-run this effect when searchTerm changes
 
             useEffect(() => {
                 let currentFiltered = [];
 
-                // Only apply search filtering if debouncedSearchTerm has at least 2 characters
                 if (debouncedSearchTerm.length >= 2) {
                     const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase();
                     currentFiltered = books.filter(book =>
@@ -93,7 +103,7 @@
                 }
 
                 setFilteredBooks(currentFiltered);
-            }, [books, debouncedSearchTerm, selectedType, selectedDb]); // Dependency changed to debouncedSearchTerm
+            }, [books, debouncedSearchTerm, selectedType, selectedDb]);
 
             const handleSearchChange = (event) => {
                 setSearchTerm(event.target.value);
