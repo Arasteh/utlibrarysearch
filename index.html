@@ -33,13 +33,13 @@
       const [dbs, setDbs] = useState([]);
       const [loading, setLoading] = useState(true);
 
-      const timerRef = useRef(null); // Ref to hold the timeout ID
+      const timerRef = useRef(null); // Ref to hold the timeout ID for debounce
 
       useEffect(() => {
         const fetchData = async () => {
           setLoading(true);
           try {
-            const response = await fetch('./utlibrary-manuscripts.json'); // Corrected path
+            const response = await fetch('./utlibrary-manuscripts.json'); // Corrected path as per user's instruction
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -80,20 +80,22 @@
         };
       }, [searchTerm]); // Re-run this effect whenever searchTerm changes
 
-      // Filtering effect, dependent on debouncedSearchTerm
+      // Filtering effect, dependent on debouncedSearchTerm and other filters
       useEffect(() => {
-        let currentFiltered = [];
+        let currentFiltered = [...books]; // Start with all books
 
-        // Only perform filtering if debouncedSearchTerm has at least 2 characters
-        if (debouncedSearchTerm.length >= 2) {
-          const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase();
-          currentFiltered = books.filter(book =>
-            (book.title || '').toLowerCase().includes(lowerCaseSearchTerm) ||
-            (book.author || '').toLowerCase().includes(lowerCaseSearchTerm) ||
-            (book.id || '').toLowerCase().includes(lowerCaseSearchTerm)
+        const q = debouncedSearchTerm.toLowerCase().trim();
+
+        // Apply search filtering only if debouncedSearchTerm has at least 2 characters
+        if (q.length >= 2) {
+          currentFiltered = currentFiltered.filter(book =>
+            (book.title || '').toLowerCase().includes(q) ||
+            (book.author || '').toLowerCase().includes(q) ||
+            (book.id || '').toLowerCase().includes(q)
           );
+        } else {
+          currentFiltered = []; // If search term is too short or empty, show no results
         }
-        // If debouncedSearchTerm.length < 2, currentFiltered remains an empty array
 
         // Apply type filter
         if (selectedType !== 'همه') {
@@ -104,6 +106,17 @@
         if (selectedDb !== 'همه') {
           currentFiltered = currentFiltered.filter(book => book.db === selectedDb);
         }
+
+        // Sort by catid
+        currentFiltered.sort((a, b) => {
+            const catidA = parseInt(a.catid, 10);
+            const catidB = parseInt(b.catid, 10);
+            // Handle cases where catid might not be a valid number
+            if (isNaN(catidA) && isNaN(catidB)) return 0;
+            if (isNaN(catidA)) return 1; // Push non-numeric catid to end
+            if (isNaN(catidB)) return -1; // Push non-numeric catid to end
+            return catidA - catidB;
+        });
 
         setFilteredBooks(currentFiltered.slice(0, 200)); // Limit to 200 results
       }, [books, debouncedSearchTerm, selectedType, selectedDb]); // Dependencies include debouncedSearchTerm
@@ -116,7 +129,7 @@
           React.createElement('input', {
             type: 'text',
             className: 'w-full mb-4 p-3 border rounded text-lg',
-            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...',
+            placeholder: 'جستجو بر اساس عنوان، نویسنده یا شناسه...', // Updated placeholder
             value: searchTerm,
             onChange: e => setSearchTerm(e.target.value),
             dir: 'rtl'
@@ -151,15 +164,26 @@
                   },
                     React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
                     React.createElement('p', { className: 'text-gray-800 mb-1' }, 'پدیدآور: ' + (book.author || '')),
+                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'تاریخ انتشار: ' + (book.date || '')), // Added date back
                     React.createElement('p', { className: 'text-gray-800 mb-1' }, 'مرکز: ' + (book.db || '')),
                     React.createElement('p', { className: 'text-gray-800 mb-1' }, 'نوع: ' + (book.type || '')),
-                    React.createElement('p', { className: 'text-gray-800 mb-1' }, 'شماره راهنما: ' + (book.id || '')),
-                    book.catid && React.createElement('a', {
-                      href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
-                      className: 'text-blue-600 hover:underline',
-                      target: '_blank',
-                      rel: 'noopener noreferrer'
-                    }, 'نمایش در کاتالوگ')
+                    book.catid && React.createElement('p', { className: 'text-gray-800' }, // Combined ID and link
+                        React.createElement('span', { className: 'font-medium' }, 'شماره راهنما:'),
+                        ' ',
+                        book.id,
+                        React.createElement('span', { className: 'font-medium mr-2' }, ' | لینک کاتالوگ:'),
+                        ' ',
+                        React.createElement(
+                            'a',
+                            {
+                                href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                className: 'text-blue-600 hover:underline'
+                            },
+                            book.catid
+                        )
+                    )
                   )
                 )
                 : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
