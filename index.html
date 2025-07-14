@@ -407,11 +407,25 @@
                       key: book.id || index,
                       className: 'bg-white p-4 rounded-lg shadow border'
                     },
-                      book.title && React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
-                      // New: Type and Center cards
+                      // Title linked to catalog
+                      book.title && book.catid && React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' },
+                          React.createElement(
+                              'a',
+                              {
+                                  href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
+                                  target: '_blank',
+                                  rel: 'noopener noreferrer',
+                                  className: 'hover:underline'
+                              },
+                              book.title
+                          )
+                      ),
+                      book.title && !book.catid && React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
+
+                      // Type and Center cards (not bold)
                       React.createElement('div', { className: 'flex flex-wrap gap-2 mb-2' },
-                          book.type && React.createElement('span', { className: 'bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full' }, book.type),
-                          book.db && React.createElement('span', { className: 'bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full' }, book.db)
+                          book.type && React.createElement('span', { className: 'bg-blue-100 text-blue-800 text-xs font-normal px-2.5 py-0.5 rounded-full' }, book.type),
+                          book.db && React.createElement('span', { className: 'bg-green-100 text-green-800 text-xs font-normal px-2.5 py-0.5 rounded-full' }, book.db)
                       ),
                       book.author && React.createElement('p', { className: 'text-gray-800 mb-1' },
                           React.createElement('span', { className: 'font-bold' }, 'پدیدآور:'),
@@ -434,15 +448,15 @@
                           React.createElement('span', { className: 'font-bold' }, 'تاریخ قمری:'),
                           ' ' + formatHijriDate(book.hijridate, book.weekday)
                       ),
-                      // Removed separate db and type paragraphs as they are now cards
                       book.id && React.createElement('p', { className: 'text-gray-800 mb-1' },
                           React.createElement('span', { className: 'font-bold' }, 'شماره راهنما:'),
                           ' ',
                           book.id
                       ),
+                      // Catalog link on the same line
                       book.catid && React.createElement('p', { className: 'text-gray-800' },
                           React.createElement('span', { className: 'font-bold' }, 'لینک کاتالوگ:'),
-                          React.createElement('br', null), // New line for the link
+                          ' ', // Space instead of <br>
                           React.createElement(
                               'a',
                               {
