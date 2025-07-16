@@ -7,17 +7,36 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3"></script>
   <style>
+    /* تنظیمات فونت برای کل بدنه */
     body {
-      font-family: sans-serif;
+      font-family: 'Inter', sans-serif; /* استفاده از فونت Inter یا فونت‌های جایگزین sans-serif */
     }
+    /* تنظیمات حالت تاریک */
     @media (prefers-color-scheme: dark) {
       html {
         color-scheme: dark;
       }
       body {
-        background-color: #1f2937;
-        color: white;
+        background-color: #1f2937; /* پس‌زمینه خاکستری تیره */
+        color: white; /* متن سفید */
       }
+    }
+    /* استایل‌دهی برای عناصر دارای گوشه‌های گرد */
+    .rounded-lg, .rounded {
+      border-radius: 0.5rem; /* گوشه‌های گرد استاندارد */
+    }
+    /* استایل‌دهی برای دکمه‌ها */
+    button {
+      transition: background-color 0.2s ease-in-out; /* انیمیشن نرم برای تغییر رنگ پس‌زمینه */
+    }
+    /* استایل‌دهی برای ورودی‌ها و انتخابگرها */
+    input, select {
+      border-color: #d1d5db; /* رنگ خاکستری روشن برای حاشیه */
+    }
+    .dark input, .dark select {
+      background-color: #374151; /* پس‌زمینه خاکستری تیره در حالت تاریک */
+      color: white; /* متن سفید در حالت تاریک */
+      border-color: #4b5563; /* حاشیه خاکستری تیره‌تر در حالت تاریک */
     }
   </style>
 </head>
@@ -27,7 +46,9 @@
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
 
+      <!-- نوار کناری فیلترها -->
       <div class="md:col-span-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow text-sm space-y-6">
+        <!-- فیلتر پدیدآورندگان پرتکرار -->
         <div>
           <h2 class="font-bold mb-2">پدیدآورندگان پرتکرار</h2>
           <ul>
@@ -37,6 +58,7 @@
             </li>
           </ul>
         </div>
+        <!-- فیلتر ناشران پرتکرار (بر اساس فیلد publisher) -->
         <div>
           <h2 class="font-bold mb-2">ناشران پرتکرار</h2>
           <ul>
@@ -46,6 +68,17 @@
             </li>
           </ul>
         </div>
+        <!-- فیلتر نام ناشر (اولیه) پرتکرار (بر اساس فیلد publisher1) -->
+        <div>
+          <h2 class="font-bold mb-2">نام ناشر (اولیه) پرتکرار</h2>
+          <ul>
+            <li v-for="([pub1, count], i) in topPublisher1s" :key="i" class="cursor-pointer hover:text-blue-600"
+                @click="filters.publisher1 = pub1">
+              {{ pub1 }} ({{ toPersianDigits(count) }})
+            </li>
+          </ul>
+        </div>
+        <!-- فیلتر انواع پرتکرار -->
         <div>
           <h2 class="font-bold mb-2">انواع پرتکرار</h2>
           <ul>
@@ -55,21 +88,44 @@
             </li>
           </ul>
         </div>
+        <!-- فیلتر سال‌های میلادی پرتکرار -->
+        <div>
+          <h2 class="font-bold mb-2">سال‌های میلادی پرتکرار</h2>
+          <ul>
+            <li v-for="([year, count], i) in topGregorianYears" :key="i" class="cursor-pointer hover:text-blue-600"
+                @click="filters.gregorianYear = year">
+              {{ toPersianDigits(year) }} ({{ toPersianDigits(count) }})
+            </li>
+          </ul>
+        </div>
+        <!-- فیلتر سال‌های قمری پرتکرار -->
+        <div>
+          <h2 class="font-bold mb-2">سال‌های قمری پرتکرار</h2>
+          <ul>
+            <li v-for="([year, count], i) in topHijriYears" :key="i" class="cursor-pointer hover:text-blue-600"
+                @click="filters.hijriYear = year">
+              {{ toPersianDigits(year) }} ({{ toPersianDigits(count) }})
+            </li>
+          </ul>
+        </div>
       </div>
 
+      <!-- بخش اصلی محتوا -->
       <div class="md:col-span-3">
+        <!-- نوار جستجو و مرتب‌سازی -->
         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <input type="text" v-model="search" placeholder="جستجو..."
-                   class="flex-grow p-2 border rounded focus:outline-none text-black">
-            <select v-model="sortKey" class="p-2 border rounded">
+                   class="flex-grow p-2 border rounded focus:outline-none text-black dark:text-white dark:bg-gray-700 dark:border-gray-600">
+            <select v-model="sortKey" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
               <option value="title">عنوان</option>
               <option value="author">پدیدآور</option>
               <option value="publisher">ناشر</option>
               <option value="type">نوع</option>
               <option value="date">تاریخ</option>
+              <option value="hijridate">تاریخ قمری</option>
             </select>
-            <select v-model="sortOrder" class="p-2 border rounded">
+            <select v-model="sortOrder" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
               <option value="asc">صعودی</option>
               <option value="desc">نزولی</option>
             </select>
@@ -78,22 +134,34 @@
           </div>
           <p class="text-gray-700 dark:text-gray-300">
             نمایش {{ toPersianDigits(filteredBooks.length) }} نتیجه از {{ toPersianDigits(books.length) }}
+            <span v-if="filteredBooks.length >= 200" class="text-orange-500">(فقط ۲۰۰ نتیجه اول نمایش داده می‌شود)</span>
           </p>
         </div>
 
+        <!-- نمایش نتایج جستجو -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="(book, i) in filteredBooks" :key="book.catid || i"
-               class="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border">
-            <h2 class="font-bold text-blue-700 text-lg mb-1">{{ book.title }}</h2>
-            <p v-if="book.author" class="mb-1">پدیدآور: {{ book.author }}</p>
-            <p v-if="book.publisher" class="mb-1">ناشر: {{ book.publisher }}</p>
-            <p v-if="book.type" class="mb-1">نوع: {{ book.type }}</p>
-            <p v-if="book.date" class="mb-1">تاریخ: {{ book.date }}</p>
-            <p v-if="book.id" class="mb-1">شماره راهنما: {{ book.id }}</p>
-            <p v-if="book.catid" class="mb-1">
+          <div v-for="(book, i) in filteredBooksLimited" :key="book.catid || i"
+               class="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <!-- عنوان آیتم که به لینک کاتالوگ پیوند دارد -->
+            <h2 class="font-bold text-blue-700 text-lg mb-1">
               <a :href="`https://lib.ut.ac.ir/site/catalogue/${book.catid}`" target="_blank"
-                 class="text-blue-600 hover:underline">لینک کاتالوگ</a>
+                 class="hover:underline">{{ book.title }}</a>
+            </h2>
+            <!-- نوع و محل نگهداری بدون عنوان پارامتر و با اندازه کوچکتر -->
+            <p v-if="book.type || book.db" class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <span v-if="book.type">{{ book.type }}</span>
+              <span v-if="book.type && book.db"> / </span>
+              <span v-if="book.db">{{ book.db }}</span>
             </p>
+
+            <!-- نمایش سایر پارامترها با برچسب فارسی -->
+            <p v-if="book.author" class="mb-1">پدیدآور: {{ book.author }}</p>
+            <p v-if="book.publisher1" class="mb-1">نام ناشر (اولیه): {{ book.publisher1 }}</p>
+            <p v-if="book.publisher" class="mb-1">ناشر: {{ book.publisher }}</p>
+            <p v-if="book.date" class="mb-1">تاریخ انتشار (اصلی): {{ book.date }}</p>
+            <p v-if="book.hijridate" class="mb-1">تاریخ قمری: {{ book.hijridate }}</p>
+            <p v-if="book.id" class="mb-1">شماره راهنما: {{ book.id }}</p>
+            <!-- لینک کاتالوگ از اینجا حذف شد زیرا عنوان آیتم اکنون لینک است. -->
           </div>
         </div>
 
@@ -106,29 +174,53 @@
     createApp({
       data() {
         return {
-          books: [],
-          search: '',
-          sortKey: 'title',
-          sortOrder: 'asc',
-          filters: {
+          books: [], // آرایه اصلی کتاب‌ها
+          search: '', // متن جستجو
+          sortKey: 'title', // کلید مرتب‌سازی پیش‌فرض
+          sortOrder: 'asc', // ترتیب مرتب‌سازی پیش‌فرض
+          filters: { // آبجکت فیلترها
             author: null,
             publisher: null,
-            type: null
+            publisher1: null, // فیلتر جدید برای publisher1
+            type: null,
+            gregorianYear: null, // فیلتر جدید برای سال میلادی
+            hijriYear: null      // فیلتر جدید برای سال قمری
           }
         }
       },
       computed: {
+        // کتاب‌های فیلتر شده و مرتب شده (قبل از محدودیت ۲۰۰ نتیجه)
         filteredBooks() {
           let result = this.books.filter(b => {
-            const term = this.search.toLowerCase();
-            return (!this.filters.author || b.author === this.filters.author) &&
-                   (!this.filters.publisher || b.publisher === this.filters.publisher) &&
-                   (!this.filters.type || b.type === this.filters.type) &&
-                   (b.title?.toLowerCase().includes(term) ||
-                    b.author?.toLowerCase().includes(term) ||
-                    b.id?.toLowerCase().includes(term));
+            const term = this.search.toLowerCase(); // تبدیل متن جستجو به حروف کوچک
+            // بررسی فیلتر پدیدآورنده
+            const matchesAuthor = !this.filters.author || b.author === this.filters.author;
+            // بررسی فیلتر ناشر
+            const matchesPublisher = !this.filters.publisher || b.publisher === this.filters.publisher;
+            // بررسی فیلتر ناشر اولیه
+            const matchesPublisher1 = !this.filters.publisher1 || b.publisher1 === this.filters.publisher1;
+            // بررسی فیلتر نوع
+            const matchesType = !this.filters.type || b.type === this.filters.type;
+            // بررسی فیلتر سال میلادی (با توجه به وجود فیلد date)
+            const matchesGregorianYear = !this.filters.gregorianYear || (b.date && b.date.includes(this.filters.gregorianYear));
+            // بررسی فیلتر سال قمری (با توجه به وجود فیلد hijridate)
+            const matchesHijriYear = !this.filters.hijriYear || (b.hijridate && b.hijridate.includes(this.filters.hijriYear));
+
+            // بررسی مطابقت با متن جستجو در فیلدهای مختلف
+            const matchesSearchTerm = (b.title?.toLowerCase().includes(term) ||
+                                       b.author?.toLowerCase().includes(term) ||
+                                       b.id?.toLowerCase().includes(term) ||
+                                       b.publisher?.toLowerCase().includes(term) ||
+                                       b.publisher1?.toLowerCase().includes(term) ||
+                                       b.type?.toLowerCase().includes(term) ||
+                                       b.db?.toLowerCase().includes(term));
+
+            // بازگرداندن نتایجی که با تمام فیلترها و متن جستجو مطابقت دارند
+            return matchesAuthor && matchesPublisher && matchesPublisher1 && matchesType &&
+                   matchesGregorianYear && matchesHijriYear && matchesSearchTerm;
           });
 
+          // مرتب‌سازی نتایج
           result.sort((a, b) => {
             let valA = (a[this.sortKey] || '').toString().toLowerCase();
             let valB = (b[this.sortKey] || '').toString().toLowerCase();
@@ -137,40 +229,104 @@
 
           return result;
         },
+        // کتاب‌های فیلتر شده و محدود شده به ۲۰۰ نتیجه
+        filteredBooksLimited() {
+          return this.filteredBooks.slice(0, 200); // محدود کردن به ۲۰۰ نتیجه اول
+        },
+        // محاسبه پرتکرارترین پدیدآورندگان
         topAuthors() {
-          return this.getTopCounts('author', 5);
+          return this.getTopCounts('author', 10); // ۱۰ پدیدآورنده برتر
         },
+        // محاسبه پرتکرارترین ناشران (بر اساس فیلد publisher)
         topPublishers() {
-          return this.getTopCounts('publisher', 5);
+          return this.getTopCounts('publisher', 5); // ۵ ناشر برتر
         },
+        // محاسبه پرتکرارترین ناشران اولیه (بر اساس فیلد publisher1)
+        topPublisher1s() {
+          return this.getTopCounts('publisher1', 5); // ۵ ناشر اولیه برتر
+        },
+        // محاسبه پرتکرارترین انواع
         topTypes() {
-          return this.getTopCounts('type', 5);
+          return this.getTopCounts('type', 5); // ۵ نوع برتر
+        },
+        // محاسبه پرتکرارترین سال‌های میلادی
+        topGregorianYears() {
+          const years = {};
+          this.books.forEach(b => {
+            if (b.date) {
+              // استخراج سال از فیلد date (مثلاً از 'YYYY' یا 'YYYY/MM/DD')
+              const yearMatch = b.date.match(/\d{4}/);
+              if (yearMatch) {
+                const year = yearMatch[0];
+                years[year] = (years[year] || 0) + 1;
+              }
+            }
+          });
+          // مرتب‌سازی بر اساس تعداد و محدود کردن به ۱۰ سال برتر
+          return Object.entries(years).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        },
+        // محاسبه پرتکرارترین سال‌های قمری
+        topHijriYears() {
+          const years = {};
+          this.books.forEach(b => {
+            if (b.hijridate) {
+              // استخراج سال از فیلد hijridate (مثلاً از 'YYYY' یا 'YYYY/MM/DD')
+              const yearMatch = b.hijridate.match(/\d{4}/);
+              if (yearMatch) {
+                const year = yearMatch[0];
+                years[year] = (years[year] || 0) + 1;
+              }
+            }
+          });
+          // مرتب‌سازی بر اساس تعداد و محدود کردن به ۱۰ سال برتر
+          return Object.entries(years).sort((a, b) => b[1] - a[1]).slice(0, 10);
         }
       },
       methods: {
+        // واکشی داده‌های کتاب‌ها از فایل JSON
         async fetchBooks() {
-          const res = await fetch('./utlibrary-manuscripts.json');
-          this.books = await res.json();
+          try {
+            const res = await fetch('./utlibrary-alldata.json');
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            this.books = await res.json();
+          } catch (error) {
+            console.error("Error fetching books:", error);
+            // می‌توانید یک پیام خطا به کاربر نمایش دهید
+          }
         },
+        // بازنشانی تمام فیلترها و جستجو
         resetFilters() {
           this.search = '';
           this.sortKey = 'title';
           this.sortOrder = 'asc';
-          this.filters = { author: null, publisher: null, type: null };
+          this.filters = {
+            author: null,
+            publisher: null,
+            publisher1: null,
+            type: null,
+            gregorianYear: null,
+            hijriYear: null
+          };
         },
-        getTopCounts(key, min = 1) {
+        // تابعی برای محاسبه تعداد تکرار هر مقدار در یک فیلد خاص
+        getTopCounts(key, limit = 10) {
           const counts = {};
           this.books.forEach(b => {
             const val = b[key];
             if (val) counts[val] = (counts[val] || 0) + 1;
           });
-          return Object.entries(counts).filter(([, c]) => c >= min).sort((a, b) => b[1] - a[1]);
+          // مرتب‌سازی بر اساس تعداد و محدود کردن به تعداد مشخص شده
+          return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit);
         },
+        // تبدیل ارقام لاتین به ارقام فارسی
         toPersianDigits(str) {
           return String(str).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
         }
       },
       mounted() {
+        // فراخوانی تابع واکشی کتاب‌ها هنگام بارگذاری کامپوننت
         this.fetchBooks();
       }
     }).mount('#app')
