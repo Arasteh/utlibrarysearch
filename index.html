@@ -168,6 +168,20 @@
             <button @click="resetFilters"
                     class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">پاک‌سازی</button>
           </div>
+          <!-- انتخابگر محدوده جستجو -->
+          <div class="mb-2">
+            <label for="search-scope" class="text-gray-700 dark:text-gray-300 ml-2">جستجو در:</label>
+            <select id="search-scope" v-model="searchScope" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <option value="all">همهٔ مشخصات</option>
+              <option value="title">عنوان</option>
+              <option value="author">پدیدآور</option>
+              <option value="publisher">ناشر</option>
+              <option value="date">تاریخ انتشار</option>
+              <option value="id">شماره راهنما</option>
+              <option value="catid">شماره کاتالوگ</option>
+              <option value="hijridate">تاریخ قمری</option>
+            </select>
+          </div>
           <p class="text-gray-700 dark:text-gray-300">
             نمایش {{ toPersianDigits(displayedBooks.length) }} نتیجه
             <span v-if="searchActive" class="text-gray-700 dark:text-gray-300">از {{ toPersianDigits(filteredBooks.length) }}</span>
@@ -183,7 +197,7 @@
             <!-- عنوان آیتم که به لینک کاتالوگ پیوند دارد -->
             <h2 class="font-bold text-blue-700 text-lg mb-1">
               <a :href="`https://lib.ut.ac.ir/site/catalogue/${book.catid}`" target="_blank"
-                 class="hover:underline">{{ book.title }}</a>
+                 class="text-blue-500 hover:text-blue-600 hover:underline">{{ book.title }}</a>
             </h2>
             <!-- نوع و محل نگهداری در دو بلوک کوچک -->
             <div class="flex flex-wrap gap-2 mb-2">
@@ -198,7 +212,7 @@
             <!-- نمایش سایر پارامترها با برچسب فارسی -->
             <p v-if="book.author" class="mb-1">
               پدیدآور:
-              <a v-if="book.authoritem" :href="`https://www.wikidata.org/wiki/${book.authoritem}`" target="_blank" class="text-blue-600 hover:underline">
+              <a v-if="book.authoritem" :href="`https://www.wikidata.org/wiki/${book.authoritem}`" target="_blank" class="text-blue-500 hover:text-blue-600 hover:underline">
                 {{ book.author }}
               </a>
               <span v-else>{{ book.author }}</span>
@@ -215,7 +229,7 @@
             <p v-if="book.catid" class="mb-1">
               شماره کاتالوگ:
               <a :href="`https://lib.ut.ac.ir/site/catalogue/${book.catid}`" target="_blank"
-                 class="text-blue-600 hover:underline">{{ book.catid }}</a>
+                 class="text-blue-500 hover:text-blue-600 hover:underline">{{ book.catid }}</a>
             </p>
           </div>
         </div>
@@ -231,6 +245,7 @@
         return {
           books: [], // آرایه اصلی کتاب‌ها
           search: '', // متن جستجو
+          searchScope: 'all', // محدوده جستجو: 'all', 'title', 'author', etc.
           sortKey: 'title', // کلید مرتب‌سازی پیش‌فرض
           sortOrder: 'asc', // ترتیب مرتب‌سازی پیش‌فرض
           filters: { // آبجکت فیلترها
@@ -259,28 +274,74 @@
           let result = this.books.filter(b => {
             const term = this.search.toLowerCase(); // تبدیل متن جستجو به حروف کوچک
             // بررسی فیلتر پدیدآورنده
-            const matchesAuthor = !this.filters.author || b.author === this.filters.author;
+            const matchesAuthorFilter = !this.filters.author || b.author === this.filters.author;
             // بررسی فیلتر ناشر (اکنون به publisher1 اعمال می‌شود)
-            const matchesPublisher1 = !this.filters.publisher1 || b.publisher1 === this.filters.publisher1;
+            const matchesPublisher1Filter = !this.filters.publisher1 || b.publisher1 === this.filters.publisher1;
             // بررسی فیلتر نوع
-            const matchesType = !this.filters.type || b.type === this.filters.type;
+            const matchesTypeFilter = !this.filters.type || b.type === this.filters.type;
             // بررسی فیلتر سال میلادی (با توجه به وجود فیلد date)
-            const matchesGregorianYear = !this.filters.gregorianYear || (b.date && b.date.includes(this.filters.gregorianYear));
+            const matchesGregorianYearFilter = !this.filters.gregorianYear || (b.date && b.date.includes(this.filters.gregorianYear));
             // بررسی فیلتر سال قمری (با توجه به وجود فیلد hijridate)
-            const matchesHijriYear = !this.filters.hijriYear || (b.hijridate && b.hijridate.includes(this.filters.hijriYear));
+            const matchesHijriYearFilter = !this.filters.hijriYear || (b.hijridate && b.hijridate.includes(this.filters.hijriYear));
 
-            // بررسی مطابقت با متن جستجو در فیلدهای مختلف
-            const matchesSearchTerm = (b.title?.toLowerCase().includes(term) ||
-                                       b.author?.toLowerCase().includes(term) ||
-                                       b.id?.toLowerCase().includes(term) ||
-                                       b.publisher1?.toLowerCase().includes(term) || // جستجو در publisher1
-                                       b.publisher?.toLowerCase().includes(term) || // همچنان جستجو در publisher اصلی
-                                       b.type?.toLowerCase().includes(term) ||
-                                       b.db?.toLowerCase().includes(term));
+            let matchesSearchTerm = true; // فرض می‌کنیم اگر جستجو خالی باشد، مطابقت دارد
+
+            if (term) { // فقط در صورتی که متن جستجو خالی نباشد، منطق جستجو را اعمال کن
+                switch (this.searchScope) {
+                    case 'all':
+                        matchesSearchTerm = (b.title?.toLowerCase().includes(term) ||
+                                             b.author?.toLowerCase().includes(term) ||
+                                             b.id?.toLowerCase().includes(term) ||
+                                             b.publisher1?.toLowerCase().includes(term) ||
+                                             b.publisher?.toLowerCase().includes(term) ||
+                                             b.type?.toLowerCase().includes(term) ||
+                                             b.db?.toLowerCase().includes(term) ||
+                                             b.catid?.toLowerCase().includes(term) ||
+                                             b.date?.toLowerCase().includes(term) ||
+                                             b.hijridate?.toLowerCase().includes(term)
+                                            );
+                        break;
+                    case 'title':
+                        matchesSearchTerm = b.title?.toLowerCase().includes(term);
+                        break;
+                    case 'author':
+                        matchesSearchTerm = b.author?.toLowerCase().includes(term);
+                        break;
+                    case 'publisher':
+                        matchesSearchTerm = (b.publisher1?.toLowerCase().includes(term) || b.publisher?.toLowerCase().includes(term));
+                        break;
+                    case 'date':
+                        matchesSearchTerm = (b.date?.toLowerCase().includes(term) || (b.gregorianyear && String(b.gregorianyear).includes(term)));
+                        break;
+                    case 'id':
+                        matchesSearchTerm = b.id?.toLowerCase().includes(term);
+                        break;
+                    case 'catid':
+                        matchesSearchTerm = b.catid?.toLowerCase().includes(term);
+                        break;
+                    case 'hijridate':
+                        matchesSearchTerm = b.hijridate?.toLowerCase().includes(term);
+                        break;
+                    default:
+                        // Fallback به 'all' در صورت نامعتبر بودن searchScope
+                        matchesSearchTerm = (b.title?.toLowerCase().includes(term) ||
+                                             b.author?.toLowerCase().includes(term) ||
+                                             b.id?.toLowerCase().includes(term) ||
+                                             b.publisher1?.toLowerCase().includes(term) ||
+                                             b.publisher?.toLowerCase().includes(term) ||
+                                             b.type?.toLowerCase().includes(term) ||
+                                             b.db?.toLowerCase().includes(term) ||
+                                             b.catid?.toLowerCase().includes(term) ||
+                                             b.date?.toLowerCase().includes(term) ||
+                                             b.hijridate?.toLowerCase().includes(term)
+                                            );
+                        break;
+                }
+            }
 
             // بازگرداندن نتایجی که با تمام فیلترها و متن جستجو مطابقت دارند
-            return matchesAuthor && matchesPublisher1 && matchesType &&
-                   matchesGregorianYear && matchesHijriYear && matchesSearchTerm;
+            return matchesAuthorFilter && matchesPublisher1Filter && matchesTypeFilter &&
+                   matchesGregorianYearFilter && matchesHijriYearFilter && matchesSearchTerm;
           });
 
           // مرتب‌سازی نتایج
@@ -368,6 +429,7 @@
         // بازنشانی تمام فیلترها و جستجو
         resetFilters() {
           this.search = '';
+          this.searchScope = 'all'; // بازنشانی محدوده جستجو
           this.sortKey = 'title';
           this.sortOrder = 'asc';
           this.filters = {
