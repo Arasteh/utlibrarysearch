@@ -59,7 +59,8 @@
   </style>
 </head>
 <body>
-  <div id="app" class="p-6 max-w-7xl mx-auto" dir="rtl">
+  <!-- افزایش عرض کلی ابزار به max-w-screen-xl و تنظیم padding -->
+  <div id="app" class="p-6 max-w-screen-xl mx-auto" dir="rtl">
     <h1 class="text-3xl font-bold mb-6 text-center">جستجوی کتاب‌های خطی فارسی</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -157,6 +158,8 @@
               <option value="type">نوع</option>
               <option value="date">تاریخ</option>
               <option value="hijridate">تاریخ قمری</option>
+              <option value="catid">شماره کاتالوگ</option> <!-- اضافه شدن شماره کاتالوگ به مرتب‌سازی -->
+              <option value="id">شماره راهنما</option> <!-- اضافه شدن شماره راهنما به مرتب‌سازی -->
             </select>
             <select v-model="sortOrder" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
               <option value="asc">صعودی</option>
@@ -173,8 +176,8 @@
           </p>
         </div>
 
-        <!-- نمایش نتایج جستجو -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- نمایش نتایج جستجو - تغییر به سه ستون در اندازه‌های متوسط به بالا -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div v-for="(book, i) in displayedBooks" :key="book.catid || i"
                class="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <!-- عنوان آیتم که به لینک کاتالوگ پیوند دارد -->
@@ -201,9 +204,13 @@
               <span v-else>{{ book.author }}</span>
             </p>
             <p v-if="book.publisher1" class="mb-1">ناشر: {{ book.publisher1 }}</p>
-            <p v-if="book.date" class="mb-1">تاریخ انتشار (اصلی): {{ book.date }}</p>
+            <!-- حذف کلمه «اصلی» از عنوان تاریخ انتشار -->
+            <p v-if="book.date" class="mb-1">تاریخ انتشار: {{ book.date }}</p>
             <p v-if="book.gregorianyear" class="mb-1">سال میلادی: {{ toPersianDigits(book.gregorianyear) }}</p>
-            <p v-if="book.hijridate" class="mb-1">تاریخ قمری: {{ book.hijridate }}</p>
+            <!-- نمایش تاریخ قمری با فرمت جدید و روز هفته -->
+            <p v-if="book.hijridate || book.weekday" class="mb-1">
+              تاریخ قمری: {{ formatHijriDate(book.hijridate, book.weekday) }}
+            </p>
             <p v-if="book.id" class="mb-1">شماره راهنما: {{ book.id }}</p>
             <p v-if="book.catid" class="mb-1">
               شماره کاتالوگ:
@@ -280,6 +287,12 @@
           result.sort((a, b) => {
             let valA = (a[this.sortKey] || '').toString().toLowerCase();
             let valB = (b[this.sortKey] || '').toString().toLowerCase();
+            // برای مرتب‌سازی عددی id و catid
+            if (this.sortKey === 'id' || this.sortKey === 'catid') {
+                valA = parseInt(valA, 10) || 0;
+                valB = parseInt(valB, 10) || 0;
+                return this.sortOrder === 'asc' ? valA - valB : valB - valA;
+            }
             return this.sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
           });
 
@@ -295,22 +308,22 @@
             return this.filteredBooks.slice(0, 200);
           }
         },
-        // محاسبه پرتکرارترین پدیدآورندگان
+        // محاسبه پرتکرارترین پدیدآورندگان بر اساس نتایج فیلتر شده
         topAuthors() {
-          return this.getTopCounts('author', 10, this.showAllAuthors);
+          return this.getTopCounts(this.filteredBooks, 'author', 10, this.showAllAuthors);
         },
-        // محاسبه پرتکرارترین ناشران (اکنون بر اساس فیلد publisher1)
+        // محاسبه پرتکرارترین ناشران (اکنون بر اساس فیلد publisher1) بر اساس نتایج فیلتر شده
         topPublishers() {
-          return this.getTopCounts('publisher1', 10, this.showAllPublishers);
+          return this.getTopCounts(this.filteredBooks, 'publisher1', 10, this.showAllPublishers);
         },
-        // محاسبه پرتکرارترین انواع
+        // محاسبه پرتکرارترین انواع بر اساس نتایج فیلتر شده
         topTypes() {
-          return this.getTopCounts('type', 10, this.showAllTypes);
+          return this.getTopCounts(this.filteredBooks, 'type', 10, this.showAllTypes);
         },
-        // محاسبه پرتکرارترین سال‌های میلادی
+        // محاسبه پرتکرارترین سال‌های میلادی بر اساس نتایج فیلتر شده
         topGregorianYears() {
           const years = {};
-          this.books.forEach(b => {
+          this.filteredBooks.forEach(b => { // استفاده از filteredBooks
             if (b.date) {
               const yearMatch = b.date.match(/\d{4}/);
               if (yearMatch) {
@@ -322,10 +335,10 @@
           const sortedYears = Object.entries(years).sort((a, b) => b[1] - a[1]);
           return this.showAllGregorianYears ? sortedYears : sortedYears.slice(0, 10);
         },
-        // محاسبه پرتکرارترین سال‌های قمری
+        // محاسبه پرتکرارترین سال‌های قمری بر اساس نتایج فیلتر شده
         topHijriYears() {
           const years = {};
-          this.books.forEach(b => {
+          this.filteredBooks.forEach(b => { // استفاده از filteredBooks
             if (b.hijridate) {
               const yearMatch = b.hijridate.match(/\d{4}/);
               if (yearMatch) {
@@ -372,9 +385,10 @@
           this.showAllHijriYears = false;
         },
         // تابعی برای محاسبه تعداد تکرار هر مقدار در یک فیلد خاص
-        getTopCounts(key, defaultLimit = 10, showAllFlag = false) {
+        // این تابع اکنون لیست کتاب‌ها را به عنوان آرگومان اول می‌پذیرد
+        getTopCounts(booksList, key, defaultLimit = 10, showAllFlag = false) {
           const counts = {};
-          this.books.forEach(b => {
+          booksList.forEach(b => { // استفاده از booksList به جای this.books
             const val = b[key];
             if (val) counts[val] = (counts[val] || 0) + 1;
           });
@@ -392,6 +406,85 @@
             [array[i], array[j]] = [array[j], array[i]];
           }
           return array;
+        },
+        // تابعی برای فرمت‌بندی تاریخ قمری
+        formatHijriDate(hijriDateStr, weekday) {
+            if (!hijriDateStr) return '';
+
+            let year = '';
+            let monthNum = null;
+            let day = '';
+
+            // حذف کاراکترهای غیر عددی و تبدیل به حروف بزرگ برای یکپارچگی 'X'
+            const cleanDateStr = String(hijriDateStr).replace(/[^0-9X]/gi, '').toUpperCase();
+
+            // استخراج بخش‌های تاریخ بر اساس طول رشته
+            if (cleanDateStr.length >= 8) { // فرض بر YYYYMMDD
+                const y = cleanDateStr.substring(0, 4);
+                const m = cleanDateStr.substring(4, 6);
+                const d = cleanDateStr.substring(6, 8);
+                if (y !== 'XXXX' && y !== 'XX') year = this.toPersianDigits(y);
+                if (m !== 'XX') monthNum = parseInt(m, 10);
+                if (d !== 'XX') day = this.toPersianDigits(d);
+            } else if (cleanDateStr.length >= 6) { // فرض بر YYMMDD
+                const y = cleanDateStr.substring(0, 2);
+                const m = cleanDateStr.substring(2, 4);
+                const d = cleanDateStr.substring(4, 6);
+
+                if (y !== 'XX') {
+                    let parsedYear = parseInt(y, 10);
+                    if (!isNaN(parsedYear)) {
+                         // فرض بر قرن ۱۳۰۰ برای سال‌های ۲ رقمی قمری
+                        if (parsedYear < 100) {
+                            parsedYear += 1300;
+                        }
+                        year = this.toPersianDigits(parsedYear);
+                    }
+                }
+                if (m !== 'XX') monthNum = parseInt(m, 10);
+                if (d !== 'XX') day = this.toPersianDigits(d);
+            } else if (cleanDateStr.length >= 5) { // فرض بر YMMDD
+                const y = cleanDateStr.substring(0, 1);
+                const m = cleanDateStr.substring(1, 3);
+                const d = cleanDateStr.substring(3, 5);
+
+                if (y !== 'X') {
+                    let parsedYear = parseInt(y, 10);
+                    if (!isNaN(parsedYear)) {
+                        // فرض بر قرن ۱۳۰۰ برای سال‌های ۱ رقمی قمری
+                        if (parsedYear < 10) {
+                            parsedYear += 1300;
+                        }
+                        year = this.toPersianDigits(parsedYear);
+                    }
+                }
+                if (m !== 'XX') monthNum = parseInt(m, 10);
+                if (d !== 'XX') day = this.toPersianDigits(d);
+            } else if (cleanDateStr.length === 4) { // فرض بر YYYY (فقط سال)
+                const y = cleanDateStr.substring(0, 4);
+                if (y !== 'XXXX' && y !== 'XX') year = this.toPersianDigits(y);
+            }
+            // اگر طول رشته کمتر از این‌ها باشد یا شامل 'X' در بخش‌های دیگر باشد، آن بخش‌ها نادیده گرفته می‌شوند.
+
+            const hijriMonths = [
+                '', 'محرم', 'صفر', 'ربیع‌الاول', 'ربیع‌الثانی', 'جمادی‌الاول', 'جمادی‌الثانی',
+                'رجب', 'شعبان', 'رمضان', 'شوال', 'ذی‌القعده', 'ذی‌الحجه'
+            ];
+
+            let formattedDateParts = [];
+            if (weekday) {
+                const persianWeekdays = {
+                    'saturday': 'شنبه', 'sunday': 'یکشنبه', 'monday': 'دوشنبه',
+                    'tuesday': 'سه‌شنبه', 'wednesday': 'چهارشنبه', 'thursday': 'پنجشنبه',
+                    'friday': 'جمعه'
+                };
+                formattedDateParts.push(persianWeekdays[weekday.toLowerCase()] || weekday);
+            }
+            if (day) formattedDateParts.push(day);
+            if (monthNum && hijriMonths[monthNum]) formattedDateParts.push(hijriMonths[monthNum]);
+            if (year) formattedDateParts.push(year);
+
+            return formattedDateParts.join(' ');
         }
       },
       mounted() {
