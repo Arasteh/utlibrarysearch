@@ -1,650 +1,179 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>جستجوی کتاب‌های خطی فارسی</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3"></script>
   <style>
-    /* Removed 'Inter' font as requested, using default sans-serif */
     body {
       font-family: sans-serif;
-      background-color: #f9fafb;
+    }
+    @media (prefers-color-scheme: dark) {
+      html {
+        color-scheme: dark;
+      }
+      body {
+        background-color: #1f2937;
+        color: white;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="app" class="p-6 max-w-7xl mx-auto" dir="rtl">
+    <h1 class="text-3xl font-bold mb-6 text-center">جستجوی کتاب‌های خطی فارسی</h1>
 
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
 
-  <script type="text/javascript">
-    // Helper function to convert numbers to Persian digits
-    const toPersianDigits = (num) => {
-        const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-        return String(num).replace(/\d/g, digit => persianDigits[digit]);
-    };
+      <div class="md:col-span-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow text-sm space-y-6">
+        <div>
+          <h2 class="font-bold mb-2">پدیدآورندگان پرتکرار</h2>
+          <ul>
+            <li v-for="([author, count], i) in topAuthors" :key="i" class="cursor-pointer hover:text-blue-600"
+                @click="filters.author = author">
+              {{ author }} ({{ toPersianDigits(count) }})
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="font-bold mb-2">ناشران پرتکرار</h2>
+          <ul>
+            <li v-for="([pub, count], i) in topPublishers" :key="i" class="cursor-pointer hover:text-blue-600"
+                @click="filters.publisher = pub">
+              {{ pub }} ({{ toPersianDigits(count) }})
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="font-bold mb-2">انواع پرتکرار</h2>
+          <ul>
+            <li v-for="([type, count], i) in topTypes" :key="i" class="cursor-pointer hover:text-blue-600"
+                @click="filters.type = type">
+              {{ type }} ({{ toPersianDigits(count) }})
+            </li>
+          </ul>
+        </div>
+      </div>
 
-    // Helper function to format Hijri date
-    const formatHijriDate = (hijridate, weekday) => {
-        if (!hijridate) return '';
+      <div class="md:col-span-3">
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <input type="text" v-model="search" placeholder="جستجو..."
+                   class="flex-grow p-2 border rounded focus:outline-none text-black">
+            <select v-model="sortKey" class="p-2 border rounded">
+              <option value="title">عنوان</option>
+              <option value="author">پدیدآور</option>
+              <option value="publisher">ناشر</option>
+              <option value="type">نوع</option>
+              <option value="date">تاریخ</option>
+            </select>
+            <select v-model="sortOrder" class="p-2 border rounded">
+              <option value="asc">صعودی</option>
+              <option value="desc">نزولی</option>
+            </select>
+            <button @click="resetFilters"
+                    class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">پاک‌سازی</button>
+          </div>
+          <p class="text-gray-700 dark:text-gray-300">
+            نمایش {{ toPersianDigits(filteredBooks.length) }} نتیجه از {{ toPersianDigits(books.length) }}
+          </p>
+        </div>
 
-        let year, month, day;
-        if (hijridate.length === 8) {
-            year = hijridate.substring(0, 4);
-            month = parseInt(hijridate.substring(4, 6), 10);
-            day = parseInt(hijridate.substring(6, 8), 10);
-        } else if (hijridate.length === 7) {
-            year = hijridate.substring(0, 3);
-            month = parseInt(hijridate.substring(3, 5), 10);
-            day = parseInt(hijridate.substring(5, 7), 10);
-        } else {
-            return hijridate;
-        }
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="(book, i) in filteredBooks" :key="book.catid || i"
+               class="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border">
+            <h2 class="font-bold text-blue-700 text-lg mb-1">{{ book.title }}</h2>
+            <p v-if="book.author" class="mb-1">پدیدآور: {{ book.author }}</p>
+            <p v-if="book.publisher" class="mb-1">ناشر: {{ book.publisher }}</p>
+            <p v-if="book.type" class="mb-1">نوع: {{ book.type }}</p>
+            <p v-if="book.date" class="mb-1">تاریخ: {{ book.date }}</p>
+            <p v-if="book.id" class="mb-1">شماره راهنما: {{ book.id }}</p>
+            <p v-if="book.catid" class="mb-1">
+              <a :href="`https://lib.ut.ac.ir/site/catalogue/${book.catid}`" target="_blank"
+                 class="text-blue-600 hover:underline">لینک کاتالوگ</a>
+            </p>
+          </div>
+        </div>
 
-        const hijriMonths = [
-            '',
-            'محرم', 'صفر', 'ربیع‌الاول', 'ربیع‌الثانی', 'جمادی‌الاول', 'جمادی‌الثانی',
-            'رجب', 'شعبان', 'رمضان', 'شوال', 'ذی‌القعده', 'ذی‌الحجه'
-        ];
+      </div>
+    </div>
+  </div>
 
-        const persianWeekdays = {
-            'Saturday': 'شنبه',
-            'Sunday': 'یکشنبه',
-            'Monday': 'دوشنبه',
-            'Tuesday': 'سه‌شنبه',
-            'Wednesday': 'چهارشنبه',
-            'Thursday': 'پنج‌شنبه',
-            'Friday': 'جمعه'
-        };
-
-        const monthName = hijriMonths[month] || String(month);
-
-        let formattedDate = `${toPersianDigits(day)} ${monthName} ${toPersianDigits(year)}`;
-
-        if (weekday && weekday.trim() !== '') {
-            const persianWeekday = persianWeekdays[weekday] || weekday;
-            formattedDate = `${persianWeekday} ${formattedDate}`;
-        }
-
-        return formattedDate;
-    };
-
-    // Helper function to extract Hijri year
-    const getHijriYear = (hijridate) => {
-        if (!hijridate || hijridate.length < 3) return '';
-        return hijridate.length === 8 ? hijridate.substring(0, 4) : hijridate.substring(0, 3);
-    };
-
-    const { useState, useEffect } = React;
-
-    const App = () => {
-      const [books, setBooks] = useState([]);
-      const [searchTerm, setSearchTerm] = useState('');
-      const [filteredBooks, setFilteredBooks] = useState([]);
-      const [loading, setLoading] = useState(true);
-      const [sortByKey, setSortByKey] = useState('catid');
-      const [sortOrder, setSortOrder] = useState('asc');
-
-      // Breakdown states for sidebar filters
-      const [authorBreakdown, setAuthorBreakdown] = useState([]);
-      const [dateBreakdown, setDateBreakdown] = useState([]);
-      const [hijriDateBreakdown, setHijriDateBreakdown] = useState([]);
-      const [gregorianYearBreakdown, setGregorianYearBreakdown] = useState([]);
-      const [publisher1Breakdown, setPublisher1Breakdown] = useState([]); // Changed to publisher1Breakdown
-
-      // Selected filter states
-      const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('همه');
-      const [selectedDateFilter, setSelectedDateFilter] = useState('همه');
-      const [selectedHijriDateFilter, setSelectedHijriDateFilter] = useState('همه');
-      const [selectedGregorianYearFilter, setSelectedGregorianYearFilter] = useState('همه');
-      const [selectedPublisher1Filter, setSelectedPublisher1Filter] = useState('همه'); // Changed to selectedPublisher1Filter
-
-      // "Show all" states for filters
-      const [showAllAuthors, setShowAllAuthors] = useState(false);
-      const [showAllDates, setShowAllDates] = useState(false);
-      const [showAllHijriDates, setShowAllHijriDates] = useState(false);
-      const [showAllGregorianYears, setShowAllGregorianYears] = useState(false);
-      const [showAllPublisher1s, setShowAllPublisher1s] = useState(false); // Changed to showAllPublisher1s
-
-      const [renderKey, setRenderKey] = useState(0); // Key to force re-render of book list
-
-      // Fetch data on component mount
-      useEffect(() => {
-        const fetchData = async () => {
-          setLoading(true);
-          try {
-            // Updated database file path
-            const response = await fetch('./utlibrary-alldata.json');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            setBooks(data);
-          } catch (error) {
-            console.error('خطا در بارگذاری داده‌ها:', error);
-          } finally {
-            setLoading(false);
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          books: [],
+          search: '',
+          sortKey: 'title',
+          sortOrder: 'asc',
+          filters: {
+            author: null,
+            publisher: null,
+            type: null
           }
-        };
-
-        fetchData();
-      }, []);
-
-      // Effect for filtering and sorting books based on search term and filters
-      useEffect(() => {
-        let booksToStartFiltering = [...books];
-
-        const q = searchTerm.toLowerCase().trim();
-
-        let booksAfterSearchTerm = [];
-        if (q !== '') {
-            booksAfterSearchTerm = booksToStartFiltering.filter(book =>
-                (book.title || '').toLowerCase().includes(q) ||
-                (book.author || '').toLowerCase().includes(q) ||
-                (book.id || '').toLowerCase().includes(q) ||
-                (book.publisher || '').toLowerCase().includes(q) ||
-                (book.publisher1 || '').toLowerCase().includes(q) // Include publisher1 in search
-            );
-        } else {
-            booksAfterSearchTerm = booksToStartFiltering;
         }
+      },
+      computed: {
+        filteredBooks() {
+          let result = this.books.filter(b => {
+            const term = this.search.toLowerCase();
+            return (!this.filters.author || b.author === this.filters.author) &&
+                   (!this.filters.publisher || b.publisher === this.filters.publisher) &&
+                   (!this.filters.type || b.type === this.filters.type) &&
+                   (b.title?.toLowerCase().includes(term) ||
+                    b.author?.toLowerCase().includes(term) ||
+                    b.id?.toLowerCase().includes(term));
+          });
 
-        // Initialize counts for all breakdown categories
-        const newAuthorCounts = {};
-        const newDateCounts = {};
-        const newHijriDateCounts = {};
-        const newGregorianYearCounts = {};
-        const newPublisher1Counts = {}; // Changed to newPublisher1Counts
+          result.sort((a, b) => {
+            let valA = (a[this.sortKey] || '').toString().toLowerCase();
+            let valB = (b[this.sortKey] || '').toString().toLowerCase();
+            return this.sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          });
 
-        // Populate counts based on books after search
-        booksAfterSearchTerm.forEach(book => {
-            if (book.author) {
-                newAuthorCounts[book.author] = (newAuthorCounts[book.author] || 0) + 1;
-            }
-            if (book.date) {
-                newDateCounts[book.date] = (newDateCounts[book.date] || 0) + 1;
-            }
-            const hijriYear = getHijriYear(book.hijridate);
-            if (hijriYear) {
-                newHijriDateCounts[hijriYear] = (newHijriDateCounts[hijriYear] || 0) + 1;
-            }
-            if (book.gregorianyear) {
-                newGregorianYearCounts[book.gregorianyear] = (newGregorianYearCounts[book.gregorianyear] || 0) + 1;
-            }
-            if (book.publisher1) { // Count Publisher1
-                newPublisher1Counts[book.publisher1] = (newPublisher1Counts[book.publisher1] || 0) + 1;
-            }
-        });
-
-        // Determine minimum count threshold for displaying filters
-        const minCountThreshold = q === '' ? 10 : 2;
-
-        // Filter and sort breakdown data
-        const displayAuthorCounts = Object.entries(newAuthorCounts)
-            .filter(([, count]) => count >= minCountThreshold)
-            .sort((a, b) => b[1] - a[1]);
-
-        const displayDateCounts = Object.entries(newDateCounts)
-            .filter(([, count]) => count >= minCountThreshold)
-            .sort((a, b) => b[1] - a[1]);
-
-        const displayHijriDateCounts = Object.entries(newHijriDateCounts)
-            .filter(([, count]) => count >= minCountThreshold)
-            .sort((a, b) => b[1] - a[1]);
-
-        const displayGregorianYearCounts = Object.entries(newGregorianYearCounts)
-            .filter(([, count]) => count >= minCountThreshold)
-            .sort((a, b) => b[1] - a[1]);
-
-        const displayPublisher1Counts = Object.entries(newPublisher1Counts) // Filter and sort Publisher1s
-            .filter(([, count]) => count >= minCountThreshold)
-            .sort((a, b) => b[1] - a[1]);
-
-        // Update breakdown states
-        setAuthorBreakdown(displayAuthorCounts);
-        setDateBreakdown(displayDateCounts);
-        setHijriDateBreakdown(displayHijriDateCounts);
-        setGregorianYearBreakdown(displayGregorianYearCounts);
-        setPublisher1Breakdown(displayPublisher1Counts); // Set Publisher1 breakdown
-
-        let finalFiltered = [...booksAfterSearchTerm];
-
-        // Apply filters
-        if (selectedAuthorFilter !== 'همه') {
-            finalFiltered = finalFiltered.filter(book => book.author === selectedAuthorFilter);
+          return result;
+        },
+        topAuthors() {
+          return this.getTopCounts('author', 5);
+        },
+        topPublishers() {
+          return this.getTopCounts('publisher', 5);
+        },
+        topTypes() {
+          return this.getTopCounts('type', 5);
         }
-
-        if (selectedDateFilter !== 'همه') {
-            finalFiltered = finalFiltered.filter(book => book.date === selectedDateFilter);
+      },
+      methods: {
+        async fetchBooks() {
+          const res = await fetch('./utlibrary-manuscripts.json');
+          this.books = await res.json();
+        },
+        resetFilters() {
+          this.search = '';
+          this.sortKey = 'title';
+          this.sortOrder = 'asc';
+          this.filters = { author: null, publisher: null, type: null };
+        },
+        getTopCounts(key, min = 1) {
+          const counts = {};
+          this.books.forEach(b => {
+            const val = b[key];
+            if (val) counts[val] = (counts[val] || 0) + 1;
+          });
+          return Object.entries(counts).filter(([, c]) => c >= min).sort((a, b) => b[1] - a[1]);
+        },
+        toPersianDigits(str) {
+          return String(str).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
         }
-
-        if (selectedHijriDateFilter !== 'همه') {
-            finalFiltered = finalFiltered.filter(book => getHijriYear(book.hijridate) === selectedHijriDateFilter);
-        }
-
-        if (selectedGregorianYearFilter !== 'همه') {
-            finalFiltered = finalFiltered.filter(book => book.gregorianyear === selectedGregorianYearFilter);
-        }
-
-        if (selectedPublisher1Filter !== 'همه') { // Apply Publisher1 filter
-            finalFiltered = finalFiltered.filter(book => book.publisher1 === selectedPublisher1Filter);
-        }
-
-        // Sort the final filtered list
-        finalFiltered.sort((a, b) => {
-            let valA, valB;
-
-            switch (sortByKey) {
-                case 'author':
-                    valA = a.author;
-                    valB = b.author;
-                    break;
-                case 'date':
-                    valA = a.date;
-                    valB = b.date;
-                    break;
-                case 'id':
-                    valA = a.id;
-                    valB = b.id;
-                    break;
-                case 'catid':
-                    valA = a.catid;
-                    valB = b.catid;
-                    break;
-                case 'hijridate':
-                    valA = a.hijridate;
-                    valB = b.hijridate;
-                    break;
-                case 'gregorianyear':
-                    valA = a.gregorianyear;
-                    valB = b.gregorianyear;
-                    break;
-                case 'publisher': // Keep publisher as a sort option if it exists in data
-                    valA = a.publisher;
-                    valB = b.publisher;
-                    break;
-                case 'publisher1': // New sort key for publisher1
-                    valA = a.publisher1;
-                    valB = b.publisher1;
-                    break;
-                case 'title':
-                default:
-                    valA = a.title;
-                    valB = b.title;
-                    break;
-            }
-
-            const isANullish = valA === null || valA === undefined || String(valA).trim() === '';
-            const isBNullish = valB === null || valB === undefined || String(valB).trim() === '';
-
-            if (isANullish && isBNullish) return 0;
-            if (isANullish) return 1;
-            if (isBNullish) return -1;
-
-            let finalValA = valA;
-            let finalValB = valB;
-
-            if (sortByKey === 'id' || sortByKey === 'catid' || sortByKey === 'hijridate' || sortByKey === 'gregorianyear') {
-                finalValA = parseInt(valA, 10);
-                finalValB = parseInt(valB, 10);
-                if (isNaN(finalValA) && isNaN(finalValB)) return 0;
-                if (isNaN(finalValA)) return 1;
-                if (isNaN(finalValB)) return -1;
-                return sortOrder === 'asc' ? finalValA - finalValB : finalValB - finalValA;
-            } else {
-                finalValA = String(valA).toLowerCase();
-                finalValB = String(valB).toLowerCase();
-                const comparison = finalValA.localeCompare(finalValB, 'fa', { sensitivity: 'base' });
-                return sortOrder === 'asc' ? comparison : -comparison;
-            }
-        });
-
-        // Limit results based on search term length
-        if (q === '') {
-            const shuffled = [...finalFiltered].sort(() => 0.5 - Math.random());
-            setFilteredBooks(shuffled.slice(0, 100));
-        } else if (q.length > 3) {
-            setFilteredBooks(finalFiltered);
-        } else {
-            setFilteredBooks(finalFiltered.slice(0, 200));
-        }
-
-        setRenderKey(prev => prev + 1); // Update key to force re-render
-      }, [books, searchTerm, sortByKey, sortOrder, selectedAuthorFilter, selectedDateFilter, selectedHijriDateFilter, selectedGregorianYearFilter, selectedPublisher1Filter]); // Updated filter dependencies
-
-      // Handle search input change
-      const handleSearchChange = (event) => {
-        setSearchTerm(event.target.value);
-        // Reset all filters when search term changes
-        setSelectedAuthorFilter('همه');
-        setSelectedDateFilter('همه');
-        setSelectedHijriDateFilter('همه');
-        setSelectedGregorianYearFilter('همه');
-        setSelectedPublisher1Filter('همه'); // Reset new filter
-        setShowAllAuthors(false);
-        setShowAllDates(false);
-        setShowAllHijriDates(false);
-        setShowAllGregorianYears(false);
-        setShowAllPublisher1s(false); // Reset new "show all"
-      };
-
-      // Handle clearing search and filters
-      const handleClearSearch = () => {
-        setSearchTerm('');
-        setSortByKey('catid');
-        setSortOrder('asc');
-        // Reset all filters
-        setSelectedAuthorFilter('همه');
-        setSelectedDateFilter('همه');
-        setSelectedHijriDateFilter('همه');
-        setSelectedGregorianYearFilter('همه');
-        setSelectedPublisher1Filter('همه'); // Reset new filter
-        setShowAllAuthors(false);
-        setShowAllDates(false);
-        setShowAllHijriDates(false);
-        setShowAllGregorianYears(false);
-        setShowAllPublisher1s(false); // Reset new "show all"
-      };
-
-      // Toggle sort order
-      const handleSortOrderToggle = () => {
-        setSortOrder(prevOrder => prevOrder === 'asc' ? 'desc' : 'asc');
-      };
-
-      // Determine which items to show for filters (top 10 or all)
-      const authorsToShow = showAllAuthors ? authorBreakdown : authorBreakdown.slice(0, 10);
-      const datesToShow = showAllDates ? dateBreakdown : dateBreakdown.slice(0, 10);
-      const hijriDatesToShow = showAllHijriDates ? hijriDateBreakdown : hijriDateBreakdown.slice(0, 10);
-      const gregorianYearsToShow = showAllGregorianYears ? gregorianYearBreakdown : gregorianYearBreakdown.slice(0, 10);
-      const publisher1sToShow = showAllPublisher1s ? publisher1Breakdown : publisher1Breakdown.slice(0, 10); // Changed to publisher1sToShow
-
-
-      return React.createElement(
-        'div',
-        { className: 'p-6 max-w-screen-2xl mx-auto', dir: 'rtl' },
-        React.createElement('h1', { className: 'text-3xl font-bold mb-6 text-center text-gray-800' }, 'جستجوی آیتم‌های کتابخانهٔ دانشگاه تهران'),
-        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
-          // Sidebar for filters
-          React.createElement('div', { className: 'md:col-span-1 bg-white p-6 rounded-lg shadow order-first md:order-last' },
-            React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'بررسی نتایج'),
-
-            // Author filter section
-            React.createElement('div', { className: 'mb-6 p-4 border rounded-lg bg-gray-50' },
-              React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'پدیدآورندگان پرتکرار:'),
-              authorsToShow.length > 0
-                ? React.createElement('ul', null,
-                    authorsToShow.map(([author, count]) =>
-                      React.createElement('li', {
-                        key: author,
-                        onClick: () => setSelectedAuthorFilter(author),
-                        className: `cursor-pointer hover:text-blue-600 rounded-md p-1 ${selectedAuthorFilter === author ? 'font-bold text-blue-700 bg-blue-100' : 'text-gray-600'}`
-                      },
-                        `${author} (${toPersianDigits(count)})`
-                      )
-                    ),
-                    authorBreakdown.length > 10 && !showAllAuthors && React.createElement('li', {
-                        onClick: () => setShowAllAuthors(true),
-                        className: 'cursor-pointer text-blue-500 hover:underline mt-2'
-                    }, 'نمایش همه'),
-                    selectedAuthorFilter !== 'همه' && React.createElement('li', {
-                        onClick: () => setSelectedAuthorFilter('همه'),
-                        className: 'cursor-pointer text-red-500 hover:underline mt-2'
-                    }, 'پاک کردن فیلتر پدیدآور')
-                  )
-                : React.createElement('p', { className: 'text-gray-500' }, 'پدیدآورنده پرتکراری یافت نشد.')
-            ),
-
-            // Hijri Date filter section
-            React.createElement('div', { className: 'mb-6 p-4 border rounded-lg bg-gray-50' },
-              React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'سال‌های قمری پرتکرار:'),
-              hijriDatesToShow.length > 0
-                ? React.createElement('ul', null,
-                    hijriDatesToShow.map(([year, count]) =>
-                      React.createElement('li', {
-                        key: year,
-                        onClick: () => setSelectedHijriDateFilter(year),
-                        className: `cursor-pointer hover:text-blue-600 rounded-md p-1 ${selectedHijriDateFilter === year ? 'font-bold text-blue-700 bg-blue-100' : 'text-gray-600'}`
-                      },
-                        `${toPersianDigits(year)} (${toPersianDigits(count)})`
-                      )
-                    ),
-                    hijriDateBreakdown.length > 10 && !showAllHijriDates && React.createElement('li', {
-                        onClick: () => setShowAllHijriDates(true),
-                        className: 'cursor-pointer text-blue-500 hover:underline mt-2'
-                    }, 'نمایش همه'),
-                    selectedHijriDateFilter !== 'همه' && React.createElement('li', {
-                        onClick: () => setSelectedHijriDateFilter('همه'),
-                        className: 'cursor-pointer text-red-500 hover:underline mt-2'
-                    }, 'پاک کردن فیلتر سال قمری')
-                  )
-                : React.createElement('p', { className: 'text-gray-500' }, 'سال قمری پرتکراری یافت نشد.')
-            ),
-
-            // Gregorian Year filter section
-            React.createElement('div', { className: 'mb-6 p-4 border rounded-lg bg-gray-50' },
-              React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'سال‌های میلادی پرتکرار:'),
-              gregorianYearsToShow.length > 0
-                ? React.createElement('ul', null,
-                    gregorianYearsToShow.map(([year, count]) =>
-                      React.createElement('li', {
-                        key: year,
-                        onClick: () => setSelectedGregorianYearFilter(year),
-                        className: `cursor-pointer hover:text-blue-600 rounded-md p-1 ${selectedGregorianYearFilter === year ? 'font-bold text-blue-700 bg-blue-100' : 'text-gray-600'}`
-                      },
-                        `${toPersianDigits(year)} (${toPersianDigits(count)})`
-                      )
-                    ),
-                    gregorianYearBreakdown.length > 10 && !showAllGregorianYears && React.createElement('li', {
-                        onClick: () => setShowAllGregorianYears(true),
-                        className: 'cursor-pointer text-blue-500 hover:underline mt-2'
-                    }, 'نمایش همه'),
-                    selectedGregorianYearFilter !== 'همه' && React.createElement('li', {
-                        onClick: () => setSelectedGregorianYearFilter('همه'),
-                        className: 'cursor-pointer text-red-500 hover:underline mt-2'
-                    }, 'پاک کردن فیلتر سال میلادی')
-                  )
-                : React.createElement('p', { className: 'text-gray-500' }, 'سال میلادی پرتکراری یافت نشد.')
-            ),
-
-            // Publisher1 filter section (UPDATED to use publisher1)
-            React.createElement('div', { className: 'mb-6 p-4 border rounded-lg bg-gray-50' },
-              React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'ناشران پرتکرار:'),
-              publisher1sToShow.length > 0
-                ? React.createElement('ul', null,
-                    publisher1sToShow.map(([publisher1, count]) =>
-                      React.createElement('li', {
-                        key: publisher1,
-                        onClick: () => setSelectedPublisher1Filter(publisher1),
-                        className: `cursor-pointer hover:text-blue-600 rounded-md p-1 ${selectedPublisher1Filter === publisher1 ? 'font-bold text-blue-700 bg-blue-100' : 'text-gray-600'}`
-                      },
-                        `${publisher1} (${toPersianDigits(count)})`
-                      )
-                    ),
-                    publisher1Breakdown.length > 5 && !showAllPublisher1s && React.createElement('li', {
-                        onClick: () => setShowAllPublisher1s(true),
-                        className: 'cursor-pointer text-blue-500 hover:underline mt-2'
-                    }, 'نمایش همه'),
-                    selectedPublisher1Filter !== 'همه' && React.createElement('li', {
-                        onClick: () => setSelectedPublisher1Filter('همه'),
-                        className: 'cursor-pointer text-red-500 hover:underline mt-2'
-                    }, 'پاک کردن فیلتر ناشر')
-                  )
-                : React.createElement('p', { className: 'text-gray-500' }, 'ناشر پرتکراری یافت نشد.')
-            ),
-
-            // Original Date filter section
-            React.createElement('div', { className: 'p-4 border rounded-lg bg-gray-50' },
-              React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'تاریخ‌های نشر (اصلی) پرتکرار:'),
-              datesToShow.length > 0
-                ? React.createElement('ul', null,
-                    datesToShow.map(([date, count]) =>
-                      React.createElement('li', {
-                        key: date,
-                        onClick: () => setSelectedDateFilter(date),
-                        className: `cursor-pointer hover:text-blue-600 rounded-md p-1 ${selectedDateFilter === date ? 'font-bold text-blue-700 bg-blue-100' : 'text-gray-600'}`
-                      },
-                        `${date} (${toPersianDigits(count)})`
-                      )
-                    ),
-                    dateBreakdown.length > 10 && !showAllDates && React.createElement('li', {
-                        onClick: () => setShowAllDates(true),
-                        className: 'cursor-pointer text-blue-500 hover:underline mt-2'
-                    }, 'نمایش همه'),
-                    selectedDateFilter !== 'همه' && React.createElement('li', {
-                        onClick: () => setSelectedDateFilter('همه'),
-                        className: 'cursor-pointer text-red-500 hover:underline mt-2'
-                    }, 'پاک کردن فیلتر تاریخ')
-                  )
-                : React.createElement('p', { className: 'text-gray-500' }, 'تاریخ نشر پرتکراری یافت نشد.')
-            )
-          ),
-
-          // Main content area: search bar and book list
-          React.createElement('div', { className: 'md:col-span-3' },
-            React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow mb-6' },
-              React.createElement('div', { className: 'flex items-center mb-4' },
-                React.createElement('input', {
-                  type: 'text',
-                  className: 'flex-grow p-3 border rounded-l-none rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out',
-                  placeholder: 'جستجو بر اساس عنوان، پدیدآور، ناشر یا شماره راهنما...',
-                  value: searchTerm,
-                  onChange: handleSearchChange,
-                  dir: 'rtl'
-                }),
-                React.createElement('button', {
-                  onClick: handleClearSearch,
-                  className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-r-none rounded-lg transition duration-200 ease-in-out shadow-md rounded-l-md'
-                }, 'پاک کردن')
-              ),
-              React.createElement('div', { className: 'flex flex-wrap gap-2 mb-4 justify-center' },
-                React.createElement('select', {
-                    value: sortByKey,
-                    onChange: e => setSortByKey(e.target.value),
-                    className: 'px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500'
-                },
-                    React.createElement('option', { value: 'title' }, 'مرتب‌سازی: عنوان'),
-                    React.createElement('option', { value: 'author' }, 'مرتب‌سازی: پدیدآور'),
-                    React.createElement('option', { value: 'date' }, 'مرتب‌سازی: تاریخ نشر (اصلی)'),
-                    React.createElement('option', { value: 'id' }, 'مرتب‌سازی: شماره راهنما'),
-                    React.createElement('option', { value: 'catid' }, 'مرتب‌سازی: آی‌دی کاتالوگ'),
-                    React.createElement('option', { value: 'hijridate' }, 'مرتب‌سازی: تاریخ قمری'),
-                    React.createElement('option', { value: 'gregorianyear' }, 'مرتب‌سازی: سال میلادی'),
-                    React.createElement('option', { value: 'publisher1' }, 'مرتب‌سازی: ناشر (اولیه)'), // New sort option for publisher1
-                    React.createElement('option', { value: 'publisher' }, 'مرتب‌سازی: ناشر') // Keep publisher as a sort option
-                ),
-                React.createElement('button', {
-                    onClick: handleSortOrderToggle,
-                    className: 'px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500'
-                }, sortOrder === 'asc' ? 'ترتیب: صعودی' : 'ترتیب: نزولی')
-              )
-            ),
-            React.createElement(
-                'div',
-                { className: 'mb-4 text-gray-700 text-lg font-medium text-center' },
-                filteredBooks.length > 0
-                        ? `نمایش ${toPersianDigits(filteredBooks.length)} نتیجه از ${toPersianDigits(books.length)}`
-                    : ''
-            ),
-            React.createElement('div', {
-                key: renderKey,
-                className: 'grid grid-cols-1 md:grid-cols-3 gap-4'
-              },
-                loading ? React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' }, 'در حال بارگذاری داده‌ها...') :
-                filteredBooks.length > 0
-                  ? filteredBooks.map((book, index) =>
-                    React.createElement('div', {
-                      key: book.id || index,
-                      className: 'bg-white p-4 rounded-lg shadow border border-gray-200 hover:shadow-lg transition duration-200 ease-in-out'
-                    },
-                      // Title linked to catalog
-                      book.title && book.catid && React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' },
-                          React.createElement(
-                              'a',
-                              {
-                                  href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
-                                  target: '_blank',
-                                  rel: 'noopener noreferrer',
-                                  className: 'hover:underline'
-                              },
-                              book.title
-                          )
-                      ),
-                      book.title && !book.catid && React.createElement('h2', { className: 'font-bold text-blue-700 mb-2 text-xl' }, book.title),
-
-                      // Type and Center cards (not bold)
-                      React.createElement('div', { className: 'flex flex-wrap gap-2 mb-2' },
-                          book.type && React.createElement('span', { className: 'bg-blue-100 text-blue-800 text-xs font-normal px-2.5 py-0.5 rounded-full' }, book.type),
-                          book.db && React.createElement('span', { className: 'bg-green-100 text-green-800 text-xs font-normal px-2.5 py-0.5 rounded-full' }, book.db)
-                      ),
-                      book.author && React.createElement('p', { className: 'text-gray-800 mb-1' },
-                          React.createElement('span', { className: 'font-bold' }, 'پدیدآور:'),
-                          ' ',
-                          book.authoritem
-                            ? React.createElement(
-                                'a',
-                                {
-                                    href: `http://wikidata.org/wiki/${book.authoritem}`,
-                                    target: '_blank',
-                                    rel: 'noopener noreferrer',
-                                    className: 'text-blue-600 hover:underline'
-                                },
-                                book.author
-                            )
-                            : book.author
-                      ),
-                      // New parameter: authorpart
-                      book.authorpart && React.createElement('p', { className: 'text-gray-800 mb-1' }, React.createElement('span', { className: 'font-bold' }, 'نقش پدیدآور:'), ' ' + book.authorpart),
-
-                      book.date && React.createElement('p', { className: 'text-gray-800 mb-1' }, React.createElement('span', { className: 'font-bold' }, 'تاریخ انتشار (اصلی):'), ' ' + book.date),
-                      book.hijridate && React.createElement('p', { className: 'text-gray-800 mb-1' },
-                          React.createElement('span', { className: 'font-bold' }, 'تاریخ قمری:'),
-                          ' ' + formatHijriDate(book.hijridate, book.weekday)
-                      ),
-                      // New parameter: gregorianyear
-                      book.gregorianyear && React.createElement('p', { className: 'text-gray-800 mb-1' }, React.createElement('span', { className: 'font-bold' }, 'سال میلادی:'), ' ' + toPersianDigits(book.gregorianyear)),
-
-                      // New parameters: publisher1 and publisher
-                      book.publisher1 && React.createElement('p', { className: 'text-gray-800 mb-1' }, React.createElement('span', { className: 'font-bold' }, 'نام ناشر (اولیه):'), ' ' + book.publisher1),
-                      book.publisher && React.createElement('p', { className: 'text-gray-800 mb-1' }, React.createElement('span', { className: 'font-bold' }, 'ناشر:'), ' ' + book.publisher),
-
-                      book.id && React.createElement('p', { className: 'text-gray-800 mb-1' },
-                          React.createElement('span', { className: 'font-bold' }, 'شماره راهنما:'),
-                          ' ',
-                          book.id
-                      ),
-                      // Catalog link on the same line
-                      book.catid && React.createElement('p', { className: 'text-gray-800' },
-                          React.createElement('span', { className: 'font-bold' }, 'لینک کاتالوگ:'),
-                          ' ', // Space instead of <br>
-                          React.createElement(
-                              'a',
-                              {
-                                  href: `https://lib.ut.ac.ir/site/catalogue/${book.catid}`,
-                                  target: '_blank',
-                                  rel: 'noopener noreferrer',
-                                  className: 'text-blue-600 hover:underline'
-                              },
-                              book.catid
-                          )
-                      )
-                    )
-                  )
-                  : React.createElement('div', { className: 'col-span-full text-center text-gray-600 text-xl p-8' },
-                      searchTerm.trim() === ''
-                        ? 'برای شروع جستجو، عبارت مورد نظر را وارد کنید.'
-                        : 'نتیجه‌ای یافت نشد.'
-                  )
-            )
-          )
-        )
-      );
-    };
-
-    const container = document.getElementById('root');
-    const root = ReactDOM.createRoot(container);
-    root.render(React.createElement(App));
+      },
+      mounted() {
+        this.fetchBooks();
+      }
+    }).mount('#app')
   </script>
 </body>
 </html>
